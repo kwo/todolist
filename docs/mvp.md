@@ -1,4 +1,4 @@
-# Phase 1 MVP: Basic task management
+# MVP: Basic task management
 
 The MVP focuses on the smallest useful version of Task List: basic task CRUD backed by Markdown files.
 
@@ -175,7 +175,7 @@ Flags:
 Behavior:
 
 - delete the task file immediately without prompting
-- confirmation prompting and `--force` are deferred to Phase 2, where parent-child relationships introduce cases that need protection
+- confirmation prompting and `--force` are deferred to the parent-child task grouping story, where deleting a parent task with children introduces cases that need protection
 
 Output:
 
@@ -210,7 +210,7 @@ On creation, `createdAt` and `lastModified` should both be set to the same curre
 
 The Markdown description is also part of the task and is updatable.
 
-The MVP does not write `status` or `priority` fields to task files. Those are introduced in Phase 1.
+The MVP does not write `status` or `priority` fields to task files. Those are introduced in the task metadata story.
 
 ## Error Handling
 
@@ -220,19 +220,19 @@ The MVP does not write `status` or `priority` fields to task files. Those are in
 - all other errors → message to stderr, exit code 1
 - success → exit code 0
 
-## Deferred to later phases
+## Deferred to later stories
 
 The following are explicitly **not** part of the MVP:
 
-- `status` and `priority` metadata (Phase 1)
-- filtering in `list` (Phase 1)
-- `--json` global option (Phase 1)
-- `-d, --directory` global option (Phase 1)
-- `TASKLIST_DIRECTORY` environment variable (Phase 1)
-- `.tasks` config file and configurable ID prefix (Phase 1)
-- confirmation prompting and `--force` on `delete` (Phase 2)
-- parent-child relationships (Phase 2)
-- dependencies (Phase 2)
+- `status` and `priority` metadata — see `user-story-metadata.md`
+- filtering in `list` — see `user-story-filtering.md`
+- `--json` global option — see `user-story-json.md`
+- `-d, --directory` global option — see `user-story-directory-selection.md`
+- `TASKLIST_DIRECTORY` environment variable — see `user-story-directory-selection.md`
+- `.tasks` config file and configurable ID prefix — see `user-story-directory-config.md`
+- confirmation prompting and `--force` on `delete` — see `user-story-parent-child.md`
+- parent-child relationships — see `user-story-parent-child.md`
+- dependencies — see `user-story-dep.md`
 
 In the MVP, the task directory is always `./tasks` and the ID prefix is always `task-`.
 
@@ -252,5 +252,13 @@ In the MVP, the task directory is always `./tasks` and the ID prefix is always `
 Shared specifications such as ID generation, file naming, and principles are documented in [README.md](../README.md).
 
 ## Open Issues
+
+None currently.
+ [README.md](../README.md).
+
+## Open Issues
+
+None currently.
+Issues
 
 None currently.

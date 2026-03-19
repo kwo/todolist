@@ -12,13 +12,9 @@ Each task is a plain text file in a directory, making tasks easy to inspect, edi
 - provide a simple CLI for common task operations
 - support machine-readable output with a global `--json` option
 
-## Roadmap
+## Planning
 
-The project is split into separate phase documents:
-
-- [Phase 1 MVP: Basic task management](docs/phase-1-mvp.md)
-- [Phase 1: Core task management polish](docs/phase-1.md)
-- [Phase 2: Task relationships and dependencies](docs/phase-2.md)
+Planning documents and user stories are collected in [docs/planning.md](docs/planning.md).
 
 ## Shared Specifications
 
