@@ -59,7 +59,7 @@ Build a deterministic seed string from task creation inputs:
 Seed format:
 
 ```text
-title|description|createdAtUnixNano|nonce
+title|description|createdAtUnix|nonce
 ```
 
 Example:
@@ -139,7 +139,7 @@ func buildSeed(title, description string, createdAt time.Time, nonce int) string
 	return fmt.Sprintf("%s|%s|%d|%d",
 		title,
 		description,
-		createdAt.UTC().UnixNano(),
+		createdAt.UTC().Unix(),
 		nonce,
 	)
 }

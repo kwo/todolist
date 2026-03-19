@@ -48,7 +48,7 @@ Excluded characters:
 
 The CLI should:
 
-1. build a seed from `title|description|createdAtUnixNano|nonce`
+1. build a seed from `title|description|createdAtUnix|nonce`
 2. hash it with Go `fnv.New64a()`
 3. encode the `uint64` hash using Crockford Base32
 4. left-pad with `0` if needed
