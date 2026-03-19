@@ -79,6 +79,12 @@ If status is omitted, it should default to `todo`.
 
 If priority is omitted, it should default to `0`.
 
+### Timestamps
+
+All timestamps use RFC 3339 in UTC.
+
+Example: `2026-03-18T10:00:00Z`
+
 ### File Naming
 
 Task files should be named:
