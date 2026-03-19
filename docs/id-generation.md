@@ -52,21 +52,20 @@ This is intentionally not cryptographic. The goal is short, deterministic, human
 Build a deterministic seed string from task creation inputs:
 
 - `title`
-- `description` or body
-- `creator` if available, otherwise empty string
+- `description`
 - `createdAt` as Unix nanoseconds
 - `nonce`
 
 Seed format:
 
 ```text
-title|description|creator|createdAtUnixNano|nonce
+title|description|createdAtUnixNano|nonce
 ```
 
 Example:
 
 ```text
-Buy groceries|Need milk, eggs, and bread.|karl|1773828000000000000|0
+Buy groceries|Need milk, eggs, and bread.|1773828000000000000|0
 ```
 
 ## Encoding process
@@ -124,9 +123,9 @@ const alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
 const visibleLen = 4
 const prefix = "task"
 
-func Generate(title, description, creator string, createdAt time.Time, exists func(string) bool) string {
+func Generate(title, description string, createdAt time.Time, exists func(string) bool) string {
 	for nonce := 0; ; nonce++ {
-		seed := buildSeed(title, description, creator, createdAt, nonce)
+		seed := buildSeed(title, description, createdAt, nonce)
 		hash := fnv64a(seed)
 		suffix := crockfordLastN(hash, visibleLen)
 		id := prefix + "-" + suffix
@@ -136,11 +135,10 @@ func Generate(title, description, creator string, createdAt time.Time, exists fu
 	}
 }
 
-func buildSeed(title, description, creator string, createdAt time.Time, nonce int) string {
-	return fmt.Sprintf("%s|%s|%s|%d|%d",
+func buildSeed(title, description string, createdAt time.Time, nonce int) string {
+	return fmt.Sprintf("%s|%s|%d|%d",
 		title,
 		description,
-		creator,
 		createdAt.UTC().UnixNano(),
 		nonce,
 	)
