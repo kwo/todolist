@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,8 +33,10 @@ type App struct {
 type rootCommand struct{}
 
 type addCommand struct {
-	app  *App
-	Args struct {
+	app      *App
+	Status   string `short:"s" long:"status" description:"set the task status"`
+	Priority int    `short:"p" long:"priority" description:"set the task priority"`
+	Args     struct {
 		Title string `positional-arg-name:"title" required:"yes"`
 	} `positional-args:"yes"`
 }
@@ -46,13 +49,17 @@ type deleteCommand struct {
 }
 
 type listCommand struct {
-	app *App
+	app      *App
+	Status   string `short:"s" long:"status" description:"filter by status; prefix with ! to exclude"`
+	Priority string `short:"p" long:"priority" description:"filter by priority; supports 3, !3, >3, <3"`
 }
 
 type updateCommand struct {
-	app   *App
-	Title string `long:"title" description:"replace the task title"`
-	Args  struct {
+	app      *App
+	Title    string `long:"title" description:"replace the task title"`
+	Status   string `short:"s" long:"status" description:"replace the task status"`
+	Priority int    `short:"p" long:"priority" description:"replace the task priority"`
+	Args     struct {
 		Task string `positional-arg-name:"task" required:"yes"`
 	} `positional-args:"yes"`
 }
@@ -122,10 +129,30 @@ func (c *addCommand) Execute(args []string) error {
 		return err
 	}
 
+	status := strings.TrimSpace(c.Status)
+	if status == "" {
+		status = tasklist.DefaultStatus
+	}
+
+	if err := tasklist.ValidateStatus(status); err != nil {
+		return err
+	}
+
+	priority := c.Priority
+	if priority == 0 {
+		priority = tasklist.DefaultPriority
+	}
+
+	if err := tasklist.ValidatePriority(priority); err != nil {
+		return err
+	}
+
 	now := tasklist.NormalizeTimestamp(c.app.Now())
 	store := tasklist.NewStore(c.app.TaskDir)
 	value := tasklist.Task{
 		Title:        title,
+		Status:       status,
+		Priority:     priority,
 		CreatedAt:    now,
 		LastModified: now,
 		Description:  description,
@@ -146,12 +173,33 @@ func (c *listCommand) Execute(args []string) error {
 		return err
 	}
 
+	statusFilter, excludeStatus, err := parseStatusFilter(c.Status)
+	if err != nil {
+		return err
+	}
+
+	priorityFilter, err := parsePriorityFilter(c.Priority)
+	if err != nil {
+		return err
+	}
+
 	tasks, err := tasklist.NewStore(c.app.TaskDir).List()
 	if err != nil {
 		return err
 	}
 
 	for _, value := range tasks {
+		if statusFilter != "" {
+			matchesStatus := value.Status == statusFilter
+			if (!excludeStatus && !matchesStatus) || (excludeStatus && matchesStatus) {
+				continue
+			}
+		}
+
+		if priorityFilter != nil && !priorityFilter(value.Priority) {
+			continue
+		}
+
 		if _, err = fmt.Fprintf(c.app.Stdout, "%s\t%s\n", value.ID, value.Title); err != nil {
 			return err
 		}
@@ -180,14 +228,9 @@ func (c *updateCommand) Execute(args []string) error {
 		return err
 	}
 
-	titleProvided := c.Title != ""
 	description, descriptionProvided, err := readOptionalDescription(c.app.Stdin, c.app.StdinProvided)
 	if err != nil {
 		return err
-	}
-
-	if !titleProvided && !descriptionProvided {
-		return fmt.Errorf("update requires --title or stdin description input")
 	}
 
 	store := tasklist.NewStore(c.app.TaskDir)
@@ -196,6 +239,10 @@ func (c *updateCommand) Execute(args []string) error {
 		return err
 	}
 
+	titleProvided := c.Title != ""
+	statusProvided := c.Status != ""
+	priorityProvided := c.Priority != 0
+
 	if titleProvided {
 		value.Title = strings.TrimSpace(c.Title)
 		if value.Title == "" {
@@ -203,8 +250,27 @@ func (c *updateCommand) Execute(args []string) error {
 		}
 	}
 
+	if statusProvided {
+		value.Status = strings.TrimSpace(c.Status)
+		if err := tasklist.ValidateStatus(value.Status); err != nil {
+			return err
+		}
+	}
+
+	if priorityProvided {
+		if err := tasklist.ValidatePriority(c.Priority); err != nil {
+			return err
+		}
+
+		value.Priority = c.Priority
+	}
+
 	if descriptionProvided {
 		value.Description = description
+	}
+
+	if !titleProvided && !statusProvided && !priorityProvided && !descriptionProvided {
+		return fmt.Errorf("update requires --title, --status, --priority, or stdin description input")
 	}
 
 	value.LastModified = tasklist.NormalizeTimestamp(c.app.Now())
@@ -224,6 +290,59 @@ func readDescription(reader io.Reader, provided bool) (string, error) {
 	value, _, err := readOptionalDescription(reader, provided)
 
 	return value, err
+}
+
+func parseStatusFilter(raw string) (string, bool, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "", false, nil
+	}
+
+	exclude := strings.HasPrefix(value, "!")
+	if exclude {
+		value = strings.TrimSpace(strings.TrimPrefix(value, "!"))
+	}
+
+	if err := tasklist.ValidateStatus(value); err != nil {
+		return "", false, err
+	}
+
+	return value, exclude, nil
+}
+
+func parsePriorityFilter(raw string) (func(int) bool, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return nil, nil
+	}
+
+	operator := "="
+	if strings.HasPrefix(value, "!") || strings.HasPrefix(value, ">") || strings.HasPrefix(value, "<") {
+		operator = value[:1]
+		value = strings.TrimSpace(value[1:])
+	}
+
+	priority, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid priority filter %q: must use n, !n, >n, or <n", raw)
+	}
+
+	if err := tasklist.ValidatePriority(priority); err != nil {
+		return nil, err
+	}
+
+	switch operator {
+	case "=":
+		return func(candidate int) bool { return candidate == priority }, nil
+	case "!":
+		return func(candidate int) bool { return candidate != priority }, nil
+	case ">":
+		return func(candidate int) bool { return candidate > priority }, nil
+	case "<":
+		return func(candidate int) bool { return candidate < priority }, nil
+	default:
+		return nil, fmt.Errorf("invalid priority filter %q", raw)
+	}
 }
 
 func readOptionalDescription(reader io.Reader, provided bool) (string, bool, error) {

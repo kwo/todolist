@@ -25,6 +25,8 @@ type Store struct {
 type frontMatter struct {
 	ID           string `yaml:"id"`
 	Title        string `yaml:"title"`
+	Status       string `yaml:"status"`
+	Priority     int    `yaml:"priority"`
 	CreatedAt    string `yaml:"createdAt"`
 	LastModified string `yaml:"lastModified"`
 }
@@ -170,13 +172,15 @@ func parse(raw []byte) (Task, error) {
 		return Task{}, err
 	}
 
-	return Task{
+	return NormalizeTask(Task{
 		ID:           value.ID,
 		Title:        value.Title,
+		Status:       value.Status,
+		Priority:     value.Priority,
 		CreatedAt:    createdAt,
 		LastModified: lastModified,
 		Description:  description,
-	}, nil
+	}), nil
 }
 
 func splitFrontMatter(raw string) (string, string, error) {
@@ -215,9 +219,13 @@ func parseTime(value string) (time.Time, error) {
 }
 
 func serialize(value Task) []byte {
+	value = NormalizeTask(value)
+
 	metadata := frontMatter{
 		ID:           value.ID,
 		Title:        value.Title,
+		Status:       value.Status,
+		Priority:     value.Priority,
 		CreatedAt:    formatTime(value.CreatedAt),
 		LastModified: formatTime(value.LastModified),
 	}
