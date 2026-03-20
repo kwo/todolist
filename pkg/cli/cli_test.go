@@ -392,7 +392,7 @@ func TestListFiltersByPriority(t *testing.T) {
 	}
 }
 
-func TestListExcludesPriorityWithBangPrefix(t *testing.T) {
+func TestListExcludesPriorityWithDotPrefix(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
@@ -400,7 +400,7 @@ func TestListExcludesPriorityWithBangPrefix(t *testing.T) {
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "3", "medium priority"})
 
-	exitCode := app.Run([]string{"list", "-p", "!3"})
+	exitCode := app.Run([]string{"list", "-p", ".3"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -423,7 +423,7 @@ func TestListFiltersPriorityGreaterThan(t *testing.T) {
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
 
-	exitCode := app.Run([]string{"list", "-p", ">3"})
+	exitCode := app.Run([]string{"list", "-p", "+3"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -438,6 +438,25 @@ func TestListFiltersPriorityGreaterThan(t *testing.T) {
 	}
 }
 
+func TestListFiltersPriorityGreaterThanZero(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "priority one"})
+	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "priority five"})
+
+	exitCode := app.Run([]string{"list", "-p", "+0"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "priority one") || !strings.Contains(output, "priority five") {
+		t.Fatalf("expected +0 to include all tasks with valid priorities, got %q", output)
+	}
+}
+
 func TestListFiltersPriorityLessThan(t *testing.T) {
 	t.Helper()
 
@@ -446,7 +465,7 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
 	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
 
-	exitCode := app.Run([]string{"list", "-p", "<3"})
+	exitCode := app.Run([]string{"list", "--priority=-3"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -466,7 +485,7 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"list", "-p", "!"})
+	exitCode := app.Run([]string{"list", "-p", "."})
 	if exitCode != 1 {
 		t.Fatalf("expected list to fail, got %d", exitCode)
 	}
@@ -475,7 +494,7 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `invalid priority filter "!": must use n, !n, >n, or <n`) {
+	if !strings.Contains(stderr.String(), `invalid priority filter ".": must use n, .n, +n, or -n`) {
 		t.Fatalf("expected invalid priority filter error, got %q", stderr.String())
 	}
 }

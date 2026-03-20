@@ -27,9 +27,9 @@ Behavior:
 - `--status <status>` includes only tasks with that status
 - `--status !<status>` excludes tasks with that status
 - `--priority <n>` includes only tasks with that priority
-- `--priority !<n>` excludes tasks with that priority
-- `--priority >n` includes only tasks with a numerically greater priority value than `n`
-- `--priority <n` includes only tasks with a numerically lower priority value than `n`
+- `--priority .<n>` excludes tasks with that priority
+- `--priority +<n>` includes only tasks with a numerically greater priority value than `n`
+- `--priority -<n>` includes only tasks with a numerically lower priority value than `n`
 
 Examples:
 
@@ -37,15 +37,16 @@ Examples:
 tasklist list --status done
 tasklist list --status '!done'
 tasklist list --priority 1
-tasklist list --priority '!3'
-tasklist list --priority '>3'
-tasklist list --priority '<3'
+tasklist list --priority .3
+tasklist list --priority +3
+tasklist list --priority=-3
 ```
 
 Because priorities are numeric and `1` is the highest priority while `5` is the lowest priority:
 
-- `--priority >3` means priorities `4` and `5`
-- `--priority <3` means priorities `1` and `2`
+- `--priority +0` means priorities `1` through `5`
+- `--priority +3` means priorities `4` and `5`
+- `--priority -3` means priorities `1` and `2`
 
 ## Acceptance criteria
 
@@ -87,7 +88,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority !<n>`
+- the user runs `tasklist list --priority .<n>`
 
 Then:
 
@@ -95,7 +96,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority >n`
+- the user runs `tasklist list --priority +<n>`
 
 Then:
 
@@ -103,7 +104,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority <n`
+- the user runs `tasklist list --priority -<n>`
 
 Then:
 
@@ -120,4 +121,6 @@ Then:
 
 ## Open issues
 
-1. Shells may require quoting filters such as `--status '!done'`, `--priority '>3'`, and `--priority '<3'`.
+1. Shells may require quoting filters such as `--status '!done'`.
+2. For `--priority -<n>`, using an equals form such as `--priority=-3` is more reliable than passing `-3` as a separate argument token.
+-3` as a separate argument token.

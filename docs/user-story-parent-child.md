@@ -10,13 +10,13 @@ so that I can organize related work.
 
 ## Goal
 
-This work adds parent-child grouping via `parentId`.
+This work adds parent-child grouping via `parentIds`.
 
 ## Task format additions
 
 This user story extends task front matter with:
 
-- `parentId` — optional parent task ID used for grouping
+- `parentIds` — optional list of parent task IDs used for grouping
 
 Example:
 
@@ -26,7 +26,9 @@ id: task-7k9m
 title: Buy groceries
 status: todo
 priority: 2
-parentId: task-3h7q
+parentIds:
+  - task-3h7q
+  - task-9p2d
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
 ---
@@ -40,12 +42,13 @@ Need milk, eggs, and bread.
 
 Given:
 
-- a task may have one optional parent task
+- a task may have zero or more parent tasks
 - a task may have many child tasks
 
 Then:
 
-- parent-child grouping is represented with `parentId`
+- parent-child grouping is represented with `parentIds`
+- a task may belong to multiple parents at the same time
 - parent-child grouping is separate from dependency relationships
 
 ### Parent deletion behavior
@@ -66,9 +69,9 @@ Then:
 
 ## Scope
 
-- `parentId` support for parent-child grouping
+- `parentIds` support for parent-child grouping
 - guarded deletion behavior for parent tasks with children
 
 ## Open issues
 
-1. The CLI behavior for creating, updating, or listing parent-child relationships beyond `parentId` storage is not yet specified.
+1. The CLI behavior for creating, updating, or listing parent-child relationships beyond `parentIds` storage is not yet specified.

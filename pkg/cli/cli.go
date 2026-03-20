@@ -317,28 +317,28 @@ func parsePriorityFilter(raw string) (func(int) bool, error) {
 	}
 
 	operator := "="
-	if strings.HasPrefix(value, "!") || strings.HasPrefix(value, ">") || strings.HasPrefix(value, "<") {
+	if strings.HasPrefix(value, ".") || strings.HasPrefix(value, "+") || strings.HasPrefix(value, "-") {
 		operator = value[:1]
 		value = strings.TrimSpace(value[1:])
 	}
 
 	priority, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid priority filter %q: must use n, !n, >n, or <n", raw)
+		return nil, fmt.Errorf("invalid priority filter %q: must use n, .n, +n, or -n", raw)
 	}
 
-	if err := tasklist.ValidatePriority(priority); err != nil {
-		return nil, err
+	if priority < 0 || priority > tasklist.DefaultPriority {
+		return nil, fmt.Errorf("invalid priority filter %q: priority must be between 0 and %d", raw, tasklist.DefaultPriority)
 	}
 
 	switch operator {
 	case "=":
 		return func(candidate int) bool { return candidate == priority }, nil
-	case "!":
+	case ".":
 		return func(candidate int) bool { return candidate != priority }, nil
-	case ">":
+	case "+":
 		return func(candidate int) bool { return candidate > priority }, nil
-	case "<":
+	case "-":
 		return func(candidate int) bool { return candidate < priority }, nil
 	default:
 		return nil, fmt.Errorf("invalid priority filter %q", raw)
