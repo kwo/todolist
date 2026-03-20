@@ -35,4 +35,4 @@ This project is split into planning and user story documents. These are not all 
 - `init` depends on task directory configuration and is best paired with task directory selection
 - machine-readable JSON output depends on the MVP and is otherwise mostly independent
 - parent-child task grouping depends on the MVP
-- task dependencies depend on the MVP and are best implemented after task metadata, since `ready` likely depends on `status: done`
+- task dependencies depend on the MVP and are best implemented after task metadata, since `ready` depends on dependencies having `status: done`

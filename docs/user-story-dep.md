@@ -46,7 +46,7 @@ This user story extends task front matter with:
 
 This user story also adds a computed field:
 
-- `ready` — true when all dependencies are completed; false when one or more dependencies are not yet completed
+- `ready` — true when all dependencies have `status: done`; false when one or more dependencies have any other status, such as `todo` or `wip`
 
 Example:
 
@@ -87,8 +87,8 @@ Given:
 Then:
 
 - `ready` is computed, not stored
-- `ready` is true only when all dependencies are completed
-- `ready` is false when one or more dependencies are not completed
+- `ready` is true only when all dependencies have `status: done`
+- `ready` is false when one or more dependencies have any other status, such as `todo` or `wip`
 
 ### Cycle handling
 
@@ -174,4 +174,4 @@ Behavior:
 ## Open issues
 
 1. Delete behavior with dependencies is unspecified. If a task is deleted and other tasks depend on it via `dependsOn`, what should happen to those references?
-2. The meaning of "completed" in the `ready` definition should be made explicit. Presumably it means `status: done`.
+2. The handling of dependencies whose status field is missing should be made explicit. Presumably they should be treated as `status: todo`.

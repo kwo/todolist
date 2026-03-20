@@ -61,19 +61,20 @@ See `docs/id-generation.md` for the full spec and Go reference implementation.
 ### Status Values
 
 - `todo`
-- `in_progress`
+- `wip`
 - `done`
 
 If status is omitted, it should default to `todo`.
 
 ### Priority Values
 
-- `0` — lowest priority
-- `1`
+- `1` — highest priority
 - `2`
-- `3` — most urgent
+- `3`
+- `4`
+- `5` — lowest priority
 
-If priority is omitted, it should default to `0`.
+If the `priority` attribute is omitted, it should default to `5`.
 
 ### Timestamps
 

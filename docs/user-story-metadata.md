@@ -72,7 +72,7 @@ Given:
 
 Then:
 
-- supported values are the shared status values documented in `README.md`
+- supported values are `todo`, `wip`, and `done`, matching the shared status values documented in `README.md`
 - if status is omitted, it defaults to `todo`
 - `add` may set status
 - `update` may replace status
@@ -85,8 +85,8 @@ Given:
 
 Then:
 
-- supported values are the shared priority values documented in `README.md`
-- if priority is omitted, it defaults to `0`
+- supported values are `1`, `2`, `3`, `4`, and `5`, matching the shared priority values documented in `README.md`
+- if the `priority` attribute is omitted, it defaults to `5`
 - `add` may set priority
 - `update` may replace priority
 
