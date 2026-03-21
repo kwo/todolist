@@ -1,12 +1,12 @@
-# User Story: task directory selection
+# User Story: todo directory selection
 
-Add directory selection controls to tasklist.
+Add directory selection controls to todolist.
 
 ## User story
 
 As a user,
-I want to choose which task directory the CLI operates on,
-so that I can work with multiple task sets.
+I want to choose which todo directory the CLI operates on,
+so that I can work with multiple todo sets.
 
 ## Goal
 
@@ -17,14 +17,14 @@ This work adds a global directory option and environment variable support.
 Global option:
 
 ```bash
-tasklist <command> -d <dir>
-tasklist <command> --directory <dir>
+todolist <command> -d <dir>
+todolist <command> --directory <dir>
 ```
 
 Environment variable:
 
 ```bash
-TASKLIST_DIRECTORY=<dir> tasklist <command>
+TODOLIST_DIRECTORY=<dir> todolist <command>
 ```
 
 The CLI is command-first, so `--directory` appears after the command.
@@ -32,26 +32,26 @@ The CLI is command-first, so `--directory` appears after the command.
 Example:
 
 ```bash
-tasklist list -d ./work-tasks
+todolist list -d ./work-todos
 ```
 
 ## Acceptance criteria
 
 Given:
 
-- tasklist needs to resolve a task directory
+- todolist needs to resolve a todo directory
 
 Then:
 
 - resolution order is:
   1. `-d, --directory`
-  2. `TASKLIST_DIRECTORY`
-  3. default `./tasks`
+  2. `TODOLIST_DIRECTORY`
+  3. default `./todo`
 
 ## Scope
 
 - global `-d, --directory` option
-- `TASKLIST_DIRECTORY` environment variable
+- `TODOLIST_DIRECTORY` environment variable
 - directory resolution order
 - directory-related error handling
 

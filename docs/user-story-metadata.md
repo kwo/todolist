@@ -1,11 +1,11 @@
-# User Story: task metadata
+# User Story: todo metadata
 
-Add task metadata fields beyond the MVP core fields.
+Add todo metadata fields beyond the MVP core fields.
 
 ## User story
 
 As a user,
-I want tasks to carry status and priority metadata,
+I want todos to carry status and priority metadata,
 so that I can better track progress and urgency.
 
 ## Goal
@@ -16,9 +16,9 @@ This work adds:
 - `priority`
 - support for setting and updating those fields through the CLI
 
-## Task format additions
+## Todo format additions
 
-This user story extends task front matter with:
+This user story extends todo front matter with:
 
 - `status`
 - `priority`
@@ -27,7 +27,7 @@ Example:
 
 ```md
 ---
-id: task-7k9m
+id: todo-7k9m
 title: Buy groceries
 status: todo
 priority: 2
@@ -43,26 +43,26 @@ Need milk, eggs, and bread.
 ### `add`
 
 ```bash
-tasklist add <title> [<status>] [<priority>]
-tasklist add title=<title> [status=<status>] [priority=<priority>]
+todolist add <title> [<status>] [<priority>]
+todolist add title=<title> [status=<status>] [priority=<priority>]
 ```
 
 ### `update`
 
 ```bash
-tasklist update <task> [<title>] [<status>] [<priority>]
-tasklist update <task> [title=<title>] [status=<status>] [priority=<priority>]
+todolist update <todo> [<title>] [<status>] [<priority>]
+todolist update <todo> [title=<title>] [status=<status>] [priority=<priority>]
 ```
 
 ### `view`
 
 ```bash
-tasklist view <task>
+todolist view <todo>
 ```
 
 Behavior:
 
-- `view` should show all task metadata, including `status` and `priority`
+- `view` should show all todo metadata, including `status` and `priority`
 
 ## Acceptance criteria
 
@@ -70,7 +70,7 @@ Behavior:
 
 Given:
 
-- a task may have a status
+- a todo may have a status
 
 Then:
 
@@ -83,7 +83,7 @@ Then:
 
 Given:
 
-- a task may have a priority
+- a todo may have a priority
 
 Then:
 
@@ -96,7 +96,7 @@ Then:
 
 Given:
 
-- a task is updated through `update`
+- a todo is updated through `update`
 
 Then:
 

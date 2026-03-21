@@ -1,4 +1,4 @@
-// Package cli provides the command-line interface for tasklist.
+// Package cli provides the command-line interface for todolist.
 package cli
 
 import (
@@ -11,12 +11,12 @@ import (
 
 	flags "github.com/jessevdk/go-flags"
 
-	"github.com/kwo/tasklist/pkg/tasklist"
+	"github.com/kwo/todolist/pkg/todolist"
 )
 
-// App is a configurable tasklist CLI application.
+// App is a configurable todolist CLI application.
 type App struct {
-	// Stdin is the input stream used for reading task descriptions.
+	// Stdin is the input stream used for reading todo descriptions.
 	Stdin io.Reader
 	// Stdout is the output stream used for normal command output.
 	Stdout io.Writer
@@ -24,8 +24,8 @@ type App struct {
 	Stderr io.Writer
 	// StdinProvided reports whether stdin should be treated as piped input.
 	StdinProvided bool
-	// TaskDir is the task directory used by the application.
-	TaskDir string
+	// TodoDir is the todo directory used by the application.
+	TodoDir string
 	// Now returns the current time and is injectable for tests.
 	Now func() time.Time
 }
@@ -34,8 +34,8 @@ type rootCommand struct{}
 
 type addCommand struct {
 	app      *App
-	Status   string `short:"s" long:"status" description:"set the task status"`
-	Priority int    `short:"p" long:"priority" description:"set the task priority"`
+	Status   string `short:"s" long:"status" description:"set the todo status"`
+	Priority int    `short:"p" long:"priority" description:"set the todo priority"`
 	Args     struct {
 		Title string `positional-arg-name:"title" required:"yes"`
 	} `positional-args:"yes"`
@@ -44,7 +44,7 @@ type addCommand struct {
 type deleteCommand struct {
 	app  *App
 	Args struct {
-		Task string `positional-arg-name:"task" required:"yes"`
+		Todo string `positional-arg-name:"todo" required:"yes"`
 	} `positional-args:"yes"`
 }
 
@@ -56,18 +56,18 @@ type listCommand struct {
 
 type updateCommand struct {
 	app      *App
-	Title    string `long:"title" description:"replace the task title"`
-	Status   string `short:"s" long:"status" description:"replace the task status"`
-	Priority int    `short:"p" long:"priority" description:"replace the task priority"`
+	Title    string `long:"title" description:"replace the todo title"`
+	Status   string `short:"s" long:"status" description:"replace the todo status"`
+	Priority int    `short:"p" long:"priority" description:"replace the todo priority"`
 	Args     struct {
-		Task string `positional-arg-name:"task" required:"yes"`
+		Todo string `positional-arg-name:"todo" required:"yes"`
 	} `positional-args:"yes"`
 }
 
 type viewCommand struct {
 	app  *App
 	Args struct {
-		Task string `positional-arg-name:"task" required:"yes"`
+		Todo string `positional-arg-name:"todo" required:"yes"`
 	} `positional-args:"yes"`
 }
 
@@ -78,7 +78,7 @@ func NewApp(stdin io.Reader, stdout, stderr io.Writer, stdinProvided bool) *App 
 		Stdout:        stdout,
 		Stderr:        stderr,
 		StdinProvided: stdinProvided,
-		TaskDir:       "./tasks",
+		TodoDir:       "./todo",
 		Now:           time.Now,
 	}
 }
@@ -103,13 +103,13 @@ func (a *App) Run(args []string) int {
 
 func newParser(app *App) *flags.Parser {
 	parser := flags.NewParser(&rootCommand{}, flags.HelpFlag)
-	parser.Name = "tasklist"
+	parser.Name = "todolist"
 
-	_, _ = parser.AddCommand("add", "Create a task", "Create a task", &addCommand{app: app})
-	_, _ = parser.AddCommand("list", "List tasks", "List tasks", &listCommand{app: app})
-	_, _ = parser.AddCommand("view", "View a task", "View a task", &viewCommand{app: app})
-	_, _ = parser.AddCommand("update", "Update a task", "Update a task", &updateCommand{app: app})
-	_, _ = parser.AddCommand("delete", "Delete a task", "Delete a task", &deleteCommand{app: app})
+	_, _ = parser.AddCommand("add", "Create a todo", "Create a todo", &addCommand{app: app})
+	_, _ = parser.AddCommand("list", "List todos", "List todos", &listCommand{app: app})
+	_, _ = parser.AddCommand("view", "View a todo", "View a todo", &viewCommand{app: app})
+	_, _ = parser.AddCommand("update", "Update a todo", "Update a todo", &updateCommand{app: app})
+	_, _ = parser.AddCommand("delete", "Delete a todo", "Delete a todo", &deleteCommand{app: app})
 
 	return parser
 }
@@ -131,25 +131,25 @@ func (c *addCommand) Execute(args []string) error {
 
 	status := strings.TrimSpace(c.Status)
 	if status == "" {
-		status = tasklist.DefaultStatus
+		status = todolist.DefaultStatus
 	}
 
-	if err := tasklist.ValidateStatus(status); err != nil {
+	if err := todolist.ValidateStatus(status); err != nil {
 		return err
 	}
 
 	priority := c.Priority
 	if priority == 0 {
-		priority = tasklist.DefaultPriority
+		priority = todolist.DefaultPriority
 	}
 
-	if err := tasklist.ValidatePriority(priority); err != nil {
+	if err := todolist.ValidatePriority(priority); err != nil {
 		return err
 	}
 
-	now := tasklist.NormalizeTimestamp(c.app.Now())
-	store := tasklist.NewStore(c.app.TaskDir)
-	value := tasklist.Task{
+	now := todolist.NormalizeTimestamp(c.app.Now())
+	store := todolist.NewStore(c.app.TodoDir)
+	value := todolist.Todo{
 		Title:        title,
 		Status:       status,
 		Priority:     priority,
@@ -157,7 +157,7 @@ func (c *addCommand) Execute(args []string) error {
 		LastModified: now,
 		Description:  description,
 	}
-	value.ID = tasklist.GenerateID(value, store.Exists)
+	value.ID = todolist.GenerateID(value, store.Exists)
 
 	if err := store.Create(value); err != nil {
 		return err
@@ -183,12 +183,12 @@ func (c *listCommand) Execute(args []string) error {
 		return err
 	}
 
-	tasks, err := tasklist.NewStore(c.app.TaskDir).List()
+	todos, err := todolist.NewStore(c.app.TodoDir).List()
 	if err != nil {
 		return err
 	}
 
-	for _, value := range tasks {
+	for _, value := range todos {
 		if statusFilter != "" {
 			matchesStatus := value.Status == statusFilter
 			if (!excludeStatus && !matchesStatus) || (excludeStatus && matchesStatus) {
@@ -213,7 +213,7 @@ func (c *viewCommand) Execute(args []string) error {
 		return err
 	}
 
-	raw, err := tasklist.NewStore(c.app.TaskDir).GetRaw(c.Args.Task)
+	raw, err := todolist.NewStore(c.app.TodoDir).GetRaw(c.Args.Todo)
 	if err != nil {
 		return err
 	}
@@ -233,8 +233,8 @@ func (c *updateCommand) Execute(args []string) error {
 		return err
 	}
 
-	store := tasklist.NewStore(c.app.TaskDir)
-	value, err := store.Get(c.Args.Task)
+	store := todolist.NewStore(c.app.TodoDir)
+	value, err := store.Get(c.Args.Todo)
 	if err != nil {
 		return err
 	}
@@ -252,13 +252,13 @@ func (c *updateCommand) Execute(args []string) error {
 
 	if statusProvided {
 		value.Status = strings.TrimSpace(c.Status)
-		if err := tasklist.ValidateStatus(value.Status); err != nil {
+		if err := todolist.ValidateStatus(value.Status); err != nil {
 			return err
 		}
 	}
 
 	if priorityProvided {
-		if err := tasklist.ValidatePriority(c.Priority); err != nil {
+		if err := todolist.ValidatePriority(c.Priority); err != nil {
 			return err
 		}
 
@@ -273,7 +273,7 @@ func (c *updateCommand) Execute(args []string) error {
 		return fmt.Errorf("update requires --title, --status, --priority, or stdin description input")
 	}
 
-	value.LastModified = tasklist.NormalizeTimestamp(c.app.Now())
+	value.LastModified = todolist.NormalizeTimestamp(c.app.Now())
 
 	return store.Update(value)
 }
@@ -283,7 +283,7 @@ func (c *deleteCommand) Execute(args []string) error {
 		return err
 	}
 
-	return tasklist.NewStore(c.app.TaskDir).Delete(c.Args.Task)
+	return todolist.NewStore(c.app.TodoDir).Delete(c.Args.Todo)
 }
 
 func readDescription(reader io.Reader, provided bool) (string, error) {
@@ -303,7 +303,7 @@ func parseStatusFilter(raw string) (string, bool, error) {
 		value = strings.TrimSpace(strings.TrimPrefix(value, "!"))
 	}
 
-	if err := tasklist.ValidateStatus(value); err != nil {
+	if err := todolist.ValidateStatus(value); err != nil {
 		return "", false, err
 	}
 
@@ -327,8 +327,8 @@ func parsePriorityFilter(raw string) (func(int) bool, error) {
 		return nil, fmt.Errorf("invalid priority filter %q: must use n, .n, +n, or -n", raw)
 	}
 
-	if priority < 0 || priority > tasklist.DefaultPriority {
-		return nil, fmt.Errorf("invalid priority filter %q: priority must be between 0 and %d", raw, tasklist.DefaultPriority)
+	if priority < 0 || priority > todolist.DefaultPriority {
+		return nil, fmt.Errorf("invalid priority filter %q: priority must be between 0 and %d", raw, todolist.DefaultPriority)
 	}
 
 	switch operator {

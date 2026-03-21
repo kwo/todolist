@@ -1,4 +1,4 @@
-package tasklist
+package todolist
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ const (
 	frontMatterDivider  = "\n---\n"
 )
 
-// Store reads and writes task Markdown files in a single task directory.
+// Store reads and writes todo Markdown files in a single todo directory.
 type Store struct {
 	dir string
 }
@@ -36,37 +36,37 @@ func NewStore(dir string) *Store {
 	return &Store{dir: dir}
 }
 
-// Exists reports whether a task file already exists for id.
+// Exists reports whether a todo file already exists for id.
 func (s *Store) Exists(id string) bool {
 	_, err := os.Stat(s.pathFor(id))
 
 	return err == nil
 }
 
-// Create writes a new task file.
-func (s *Store) Create(value Task) error {
+// Create writes a new todo file.
+func (s *Store) Create(value Todo) error {
 	if err := s.ensureDirectory(); err != nil {
 		return err
 	}
 
-	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTask(value)), 0o600)
+	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTodo(value)), 0o600)
 }
 
-// Get loads a task by ID.
-func (s *Store) Get(id string) (Task, error) {
+// Get loads a todo by ID.
+func (s *Store) Get(id string) (Todo, error) {
 	if err := s.ensureDirectory(); err != nil {
-		return Task{}, err
+		return Todo{}, err
 	}
 
 	raw, err := os.ReadFile(s.pathFor(id))
 	if err != nil {
-		return Task{}, fmt.Errorf("read task %q: %w", id, err)
+		return Todo{}, fmt.Errorf("read todo %q: %w", id, err)
 	}
 
 	return parse(raw)
 }
 
-// GetRaw loads the raw task file bytes by ID.
+// GetRaw loads the raw todo file bytes by ID.
 func (s *Store) GetRaw(id string) ([]byte, error) {
 	if err := s.ensureDirectory(); err != nil {
 		return nil, err
@@ -74,24 +74,24 @@ func (s *Store) GetRaw(id string) ([]byte, error) {
 
 	raw, err := os.ReadFile(s.pathFor(id))
 	if err != nil {
-		return nil, fmt.Errorf("read task %q: %w", id, err)
+		return nil, fmt.Errorf("read todo %q: %w", id, err)
 	}
 
 	return raw, nil
 }
 
-// List loads all task files in the store sorted by ID.
-func (s *Store) List() ([]Task, error) {
+// List loads all todo files in the store sorted by ID.
+func (s *Store) List() ([]Todo, error) {
 	if err := s.ensureDirectory(); err != nil {
 		return nil, err
 	}
 
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
-		return nil, fmt.Errorf("read task directory %q: %w", s.dir, err)
+		return nil, fmt.Errorf("read todo directory %q: %w", s.dir, err)
 	}
 
-	tasks := make([]Task, 0, len(entries))
+	todos := make([]Todo, 0, len(entries))
 	for _, entry := range entries {
 		if skipEntry(entry) {
 			continue
@@ -102,33 +102,33 @@ func (s *Store) List() ([]Task, error) {
 			return nil, itemErr
 		}
 
-		tasks = append(tasks, item)
+		todos = append(todos, item)
 	}
 
-	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].ID < tasks[j].ID
+	sort.Slice(todos, func(i, j int) bool {
+		return todos[i].ID < todos[j].ID
 	})
 
-	return tasks, nil
+	return todos, nil
 }
 
-// Update overwrites an existing task file.
-func (s *Store) Update(value Task) error {
+// Update overwrites an existing todo file.
+func (s *Store) Update(value Todo) error {
 	if err := s.ensureDirectory(); err != nil {
 		return err
 	}
 
-	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTask(value)), 0o600)
+	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTodo(value)), 0o600)
 }
 
-// Delete removes a task file by ID.
+// Delete removes a todo file by ID.
 func (s *Store) Delete(id string) error {
 	if err := s.ensureDirectory(); err != nil {
 		return err
 	}
 
 	if err := os.Remove(s.pathFor(id)); err != nil {
-		return fmt.Errorf("delete task %q: %w", id, err)
+		return fmt.Errorf("delete todo %q: %w", id, err)
 	}
 
 	return nil
@@ -137,11 +137,11 @@ func (s *Store) Delete(id string) error {
 func (s *Store) ensureDirectory() error {
 	info, err := os.Stat(s.dir)
 	if err != nil {
-		return fmt.Errorf("task directory %q: %w", s.dir, err)
+		return fmt.Errorf("todo directory %q: %w", s.dir, err)
 	}
 
 	if !info.IsDir() {
-		return fmt.Errorf("task directory %q is not a directory", s.dir)
+		return fmt.Errorf("todo directory %q is not a directory", s.dir)
 	}
 
 	return nil
@@ -151,28 +151,28 @@ func (s *Store) pathFor(id string) string {
 	return filepath.Join(s.dir, id+".md")
 }
 
-func parse(raw []byte) (Task, error) {
+func parse(raw []byte) (Todo, error) {
 	front, description, err := splitFrontMatter(string(raw))
 	if err != nil {
-		return Task{}, err
+		return Todo{}, err
 	}
 
 	value, err := parseFrontMatter(front)
 	if err != nil {
-		return Task{}, err
+		return Todo{}, err
 	}
 
 	createdAt, err := parseTime(value.CreatedAt)
 	if err != nil {
-		return Task{}, err
+		return Todo{}, err
 	}
 
 	lastModified, err := parseTime(value.LastModified)
 	if err != nil {
-		return Task{}, err
+		return Todo{}, err
 	}
 
-	return NormalizeTask(Task{
+	return NormalizeTodo(Todo{
 		ID:           value.ID,
 		Title:        value.Title,
 		Status:       value.Status,
@@ -185,13 +185,13 @@ func parse(raw []byte) (Task, error) {
 
 func splitFrontMatter(raw string) (string, string, error) {
 	if !strings.HasPrefix(raw, frontMatterBoundary) {
-		return "", "", fmt.Errorf("task file is missing YAML front matter")
+		return "", "", fmt.Errorf("todo file is missing YAML front matter")
 	}
 
 	rest := raw[len(frontMatterBoundary):]
 	index := strings.Index(rest, frontMatterDivider)
 	if index < 0 {
-		return "", "", fmt.Errorf("task file is missing a closing front matter boundary")
+		return "", "", fmt.Errorf("todo file is missing a closing front matter boundary")
 	}
 
 	front := rest[:index]
@@ -218,8 +218,8 @@ func parseTime(value string) (time.Time, error) {
 	return parsed.UTC(), nil
 }
 
-func serialize(value Task) []byte {
-	value = NormalizeTask(value)
+func serialize(value Todo) []byte {
+	value = NormalizeTodo(value)
 
 	metadata := frontMatter{
 		ID:           value.ID,

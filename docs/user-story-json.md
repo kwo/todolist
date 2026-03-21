@@ -1,12 +1,12 @@
 # User Story: machine-readable JSON output
 
-Add machine-readable JSON output to tasklist.
+Add machine-readable JSON output to todolist.
 
 ## User story
 
 As a user,
 I want command output in JSON,
-so that I can script against tasklist and integrate it with other tools.
+so that I can script against todolist and integrate it with other tools.
 
 ## Goal
 
@@ -17,15 +17,15 @@ This work adds a global `--json` option for supported commands.
 Global option:
 
 ```bash
-tasklist <command> --json
+todolist <command> --json
 ```
 
 Examples:
 
 ```bash
-tasklist list --json
-tasklist view --json task-7k9m
-tasklist add --json "Buy groceries"
+todolist list --json
+todolist view --json todo-7k9m
+todolist add --json "Buy groceries"
 ```
 
 ## Acceptance criteria

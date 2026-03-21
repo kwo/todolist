@@ -48,4 +48,4 @@ formatters.settings:
     sections:
       - standard
       - default
-      - prefix(github.com/kwo/tasklist)
+      - prefix(github.com/kwo/todolist)

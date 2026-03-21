@@ -1,49 +1,49 @@
-# User Story: task filtering
+# User Story: todo filtering
 
-Add filtering to task listing.
+Add filtering to todo listing.
 
 ## User story
 
 As a user,
-I want to filter task listings,
-so that I can focus on the tasks that matter right now.
+I want to filter todo listings,
+so that I can focus on the todos that matter right now.
 
 ## Goal
 
-This work adds filtering to `list` on top of task metadata.
+This work adds filtering to `list` on top of todo metadata.
 
 ## Command surface
 
 ### `list`
 
 ```bash
-tasklist list [<status-filter>] [<priority-filter>]
-tasklist list [status=<status-filter>] [priority=<priority-filter>]
+todolist list [<status-filter>] [<priority-filter>]
+todolist list [status=<status-filter>] [priority=<priority-filter>]
 ```
 
 Behavior:
 
 - retain the default compact human-readable list format
 - apply filters before rendering output
-- a positional status filter includes only tasks with that status
-- a positional `!<status>` filter excludes tasks with that status
-- a positional priority filter `<n>` includes only tasks with that priority
-- a positional priority filter `.<n>` excludes tasks with that priority
-- a positional priority filter `+<n>` includes only tasks with a numerically greater priority value than `n`
-- a positional priority filter `-<n>` includes only tasks with a numerically lower priority value than `n`
+- a positional status filter includes only todos with that status
+- a positional `!<status>` filter excludes todos with that status
+- a positional priority filter `<n>` includes only todos with that priority
+- a positional priority filter `.<n>` excludes todos with that priority
+- a positional priority filter `+<n>` includes only todos with a numerically greater priority value than `n`
+- a positional priority filter `-<n>` includes only todos with a numerically lower priority value than `n`
 - explicit `status=<status-filter>` and `priority=<priority-filter>` notation may also be used
 
 Examples:
 
 ```bash
-tasklist list done
-tasklist list '!done'
-tasklist list 1
-tasklist list .3
-tasklist list +3
-tasklist list priority=-3
-tasklist list status=done
-tasklist list priority=+3
+todolist list done
+todolist list '!done'
+todolist list 1
+todolist list .3
+todolist list +3
+todolist list priority=-3
+todolist list status=done
+todolist list priority=+3
 ```
 
 Because priorities are numeric and `1` is the highest priority while `5` is the lowest priority:
@@ -58,61 +58,61 @@ Because priorities are numeric and `1` is the highest priority while `5` is the 
 
 Given:
 
-- tasks have a `status` field
+- todos have a `status` field
 
 When:
 
-- the user runs `tasklist list <status>` or `tasklist list status=<status>`
+- the user runs `todolist list <status>` or `todolist list status=<status>`
 
 Then:
 
-- only tasks with that status are listed
+- only todos with that status are listed
 
 When:
 
-- the user runs `tasklist list !<status>` or `tasklist list status=!<status>`
+- the user runs `todolist list !<status>` or `todolist list status=!<status>`
 
 Then:
 
-- tasks with that status are excluded from the list
+- todos with that status are excluded from the list
 
 ### Priority filtering
 
 Given:
 
-- tasks have a `priority` field
+- todos have a `priority` field
 
 When:
 
-- the user runs `tasklist list <n>` or `tasklist list priority=<n>`
+- the user runs `todolist list <n>` or `todolist list priority=<n>`
 
 Then:
 
-- only tasks with that priority are listed
+- only todos with that priority are listed
 
 When:
 
-- the user runs `tasklist list .<n>` or `tasklist list priority=.<n>`
+- the user runs `todolist list .<n>` or `todolist list priority=.<n>`
 
 Then:
 
-- tasks with that priority are excluded from the list
+- todos with that priority are excluded from the list
 
 When:
 
-- the user runs `tasklist list +<n>` or `tasklist list priority=+<n>`
+- the user runs `todolist list +<n>` or `todolist list priority=+<n>`
 
 Then:
 
-- only tasks with a numerically greater priority value than `n` are listed
+- only todos with a numerically greater priority value than `n` are listed
 
 When:
 
-- the user runs `tasklist list -<n>` or `tasklist list priority=-<n>`
+- the user runs `todolist list -<n>` or `todolist list priority=-<n>`
 
 Then:
 
-- only tasks with a numerically lower priority value than `n` are listed
+- only todos with a numerically lower priority value than `n` are listed
 
 ## Scope
 
@@ -121,7 +121,7 @@ Then:
 
 ## Dependencies
 
-- depends on [User Story: task metadata](user-story-metadata.md)
+- depends on [User Story: todo metadata](user-story-metadata.md)
 
 ## Open issues
 

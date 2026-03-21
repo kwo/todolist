@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kwo/tasklist/pkg/cli"
+	"github.com/kwo/todolist/pkg/cli"
 )
 
 //nolint:maintidx // End-to-end CLI flow assertions are intentionally kept together.
@@ -24,7 +24,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 
 	id := strings.TrimSpace(stdout.String())
 	if id == "" {
-		t.Fatal("expected add to print a task id")
+		t.Fatal("expected add to print a todo id")
 	}
 
 	stdout.Reset()
@@ -82,12 +82,12 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 	}
 
 	//nolint:gosec // Test reads a file created in a temporary directory by the CLI.
-	rawTask, err := os.ReadFile(filepath.Join(app.TaskDir, id+".md"))
+	rawTodo, err := os.ReadFile(filepath.Join(app.TodoDir, id+".md"))
 	if err != nil {
-		t.Fatalf("read updated task: %v", err)
+		t.Fatalf("read updated todo: %v", err)
 	}
 
-	updated := string(rawTask)
+	updated := string(rawTodo)
 	if !strings.Contains(updated, "title: Buy groceries and snacks") {
 		t.Fatalf("expected updated title, got %q", updated)
 	}
@@ -118,13 +118,13 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("expected delete to print nothing, got %q", stdout.String())
 	}
 
-	entries, err := os.ReadDir(app.TaskDir)
+	entries, err := os.ReadDir(app.TodoDir)
 	if err != nil {
-		t.Fatalf("read task dir: %v", err)
+		t.Fatalf("read todo dir: %v", err)
 	}
 
 	if len(entries) != 0 {
-		t.Fatalf("expected task dir to be empty, found %d entries", len(entries))
+		t.Fatalf("expected todo dir to be empty, found %d entries", len(entries))
 	}
 }
 
@@ -285,12 +285,12 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 	}
 }
 
-func TestUpdateMissingTaskFailsBeforeNoChangeValidation(t *testing.T) {
+func TestUpdateMissingTodoFailsBeforeNoChangeValidation(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"update", "task-7k9m"})
+	exitCode := app.Run([]string{"update", "todo-7k9m"})
 	if exitCode != 1 {
 		t.Fatalf("expected update to fail, got %d", exitCode)
 	}
@@ -299,8 +299,8 @@ func TestUpdateMissingTaskFailsBeforeNoChangeValidation(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `read task "task-7k9m"`) {
-		t.Fatalf("expected missing task error, got %q", stderr.String())
+	if !strings.Contains(stderr.String(), `read todo "todo-7k9m"`) {
+		t.Fatalf("expected missing todo error, got %q", stderr.String())
 	}
 }
 
@@ -309,8 +309,8 @@ func TestListFiltersByStatus(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first task"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second task"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second todo"})
 
 	exitCode := app.Run([]string{"list", "-s", "done"})
 	if exitCode != 0 {
@@ -318,12 +318,12 @@ func TestListFiltersByStatus(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if strings.Contains(output, "first task") {
-		t.Fatalf("expected todo task to be filtered out, got %q", output)
+	if strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be filtered out, got %q", output)
 	}
 
-	if !strings.Contains(output, "second task") {
-		t.Fatalf("expected done task to be included, got %q", output)
+	if !strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be included, got %q", output)
 	}
 }
 
@@ -332,8 +332,8 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first task"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second task"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second todo"})
 
 	exitCode := app.Run([]string{"list", "-s", "!done"})
 	if exitCode != 0 {
@@ -341,12 +341,12 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "first task") {
-		t.Fatalf("expected todo task to be included, got %q", output)
+	if !strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be included, got %q", output)
 	}
 
-	if strings.Contains(output, "second task") {
-		t.Fatalf("expected done task to be excluded, got %q", output)
+	if strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be excluded, got %q", output)
 	}
 }
 
@@ -374,8 +374,8 @@ func TestListFiltersByPriority(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "low priority"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "low priority"})
 
 	exitCode := app.Run([]string{"list", "-p", "1"})
 	if exitCode != 0 {
@@ -384,11 +384,11 @@ func TestListFiltersByPriority(t *testing.T) {
 
 	output := stdout.String()
 	if !strings.Contains(output, "high priority") {
-		t.Fatalf("expected priority 1 task to be included, got %q", output)
+		t.Fatalf("expected priority 1 todo to be included, got %q", output)
 	}
 
 	if strings.Contains(output, "low priority") {
-		t.Fatalf("expected priority 5 task to be filtered out, got %q", output)
+		t.Fatalf("expected priority 5 todo to be filtered out, got %q", output)
 	}
 }
 
@@ -397,8 +397,8 @@ func TestListExcludesPriorityWithDotPrefix(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "3", "medium priority"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "3", "medium priority"})
 
 	exitCode := app.Run([]string{"list", "-p", ".3"})
 	if exitCode != 0 {
@@ -407,11 +407,11 @@ func TestListExcludesPriorityWithDotPrefix(t *testing.T) {
 
 	output := stdout.String()
 	if !strings.Contains(output, "high priority") {
-		t.Fatalf("expected priority 1 task to be included, got %q", output)
+		t.Fatalf("expected priority 1 todo to be included, got %q", output)
 	}
 
 	if strings.Contains(output, "medium priority") {
-		t.Fatalf("expected priority 3 task to be excluded, got %q", output)
+		t.Fatalf("expected priority 3 todo to be excluded, got %q", output)
 	}
 }
 
@@ -420,8 +420,8 @@ func TestListFiltersPriorityGreaterThan(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
 
 	exitCode := app.Run([]string{"list", "-p", "+3"})
 	if exitCode != 0 {
@@ -430,11 +430,11 @@ func TestListFiltersPriorityGreaterThan(t *testing.T) {
 
 	output := stdout.String()
 	if strings.Contains(output, "priority two") {
-		t.Fatalf("expected priority 2 task to be filtered out, got %q", output)
+		t.Fatalf("expected priority 2 todo to be filtered out, got %q", output)
 	}
 
 	if !strings.Contains(output, "priority four") {
-		t.Fatalf("expected priority 4 task to be included, got %q", output)
+		t.Fatalf("expected priority 4 todo to be included, got %q", output)
 	}
 }
 
@@ -443,8 +443,8 @@ func TestListFiltersPriorityGreaterThanZero(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "priority one"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "priority five"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "priority one"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "priority five"})
 
 	exitCode := app.Run([]string{"list", "-p", "+0"})
 	if exitCode != 0 {
@@ -453,7 +453,7 @@ func TestListFiltersPriorityGreaterThanZero(t *testing.T) {
 
 	output := stdout.String()
 	if !strings.Contains(output, "priority one") || !strings.Contains(output, "priority five") {
-		t.Fatalf("expected +0 to include all tasks with valid priorities, got %q", output)
+		t.Fatalf("expected +0 to include all todos with valid priorities, got %q", output)
 	}
 }
 
@@ -462,8 +462,8 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
-	addTaskForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
 
 	exitCode := app.Run([]string{"list", "--priority=-3"})
 	if exitCode != 0 {
@@ -472,11 +472,11 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 
 	output := stdout.String()
 	if !strings.Contains(output, "priority two") {
-		t.Fatalf("expected priority 2 task to be included, got %q", output)
+		t.Fatalf("expected priority 2 todo to be included, got %q", output)
 	}
 
 	if strings.Contains(output, "priority four") {
-		t.Fatalf("expected priority 4 task to be filtered out, got %q", output)
+		t.Fatalf("expected priority 4 todo to be filtered out, got %q", output)
 	}
 }
 
@@ -499,13 +499,13 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 	}
 }
 
-func TestMissingTaskDirectoryFails(t *testing.T) {
+func TestMissingTodoDirectoryFails(t *testing.T) {
 	t.Helper()
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
-	app.TaskDir = filepath.Join(t.TempDir(), "missing")
+	app.TodoDir = filepath.Join(t.TempDir(), "missing")
 	app.Now = func() time.Time {
 		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
 	}
@@ -515,12 +515,12 @@ func TestMissingTaskDirectoryFails(t *testing.T) {
 		t.Fatalf("expected list to fail, got %d", exitCode)
 	}
 
-	if !strings.Contains(stderr.String(), "task directory") {
+	if !strings.Contains(stderr.String(), "todo directory") {
 		t.Fatalf("expected missing directory error, got %q", stderr.String())
 	}
 }
 
-func addTaskForTest(t *testing.T, app *cli.App, stdout, stderr *bytes.Buffer, args []string) string {
+func addTodoForTest(t *testing.T, app *cli.App, stdout, stderr *bytes.Buffer, args []string) string {
 	t.Helper()
 
 	stdout.Reset()
@@ -546,13 +546,13 @@ func newTestApp(t *testing.T, stdinProvided bool, stdin string) (*cli.App, *byte
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(stdin), stdout, stderr, stdinProvided)
-	app.TaskDir = filepath.Join(t.TempDir(), "tasks")
+	app.TodoDir = filepath.Join(t.TempDir(), "todo")
 	app.Now = func() time.Time {
 		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
 	}
 
-	if err := os.Mkdir(app.TaskDir, 0o750); err != nil {
-		t.Fatalf("create task dir: %v", err)
+	if err := os.Mkdir(app.TodoDir, 0o750); err != nil {
+		t.Fatalf("create todo dir: %v", err)
 	}
 
 	return app, stdout, stderr

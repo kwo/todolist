@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/kwo/tasklist/pkg/cli"
+	"github.com/kwo/todolist/pkg/cli"
 )
 
 func main() {

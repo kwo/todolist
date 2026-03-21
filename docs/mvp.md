@@ -1,6 +1,6 @@
-# MVP: Basic task management
+# MVP: Basic todo management
 
-The MVP focuses on the smallest useful version of Task List: basic task CRUD backed by Markdown files.
+The MVP focuses on the smallest useful version of Todo List: basic todo CRUD backed by Markdown files.
 
 ## CLI shape
 
@@ -13,25 +13,25 @@ For the MVP, the CLI should optimize for fast human typing:
 
 That means:
 
-- task IDs should be positional arguments for `view`, `update`, and `delete`
-- the task title should be a positional argument for `add`
+- todo IDs should be positional arguments for `view`, `update`, and `delete`
+- the todo title should be a positional argument for `add`
 - `update` should accept an optional replacement title as a command value
 - `update` may also accept `title=<title>` for explicit assignment
-- the task description should be read from stdin when stdin is piped
+- the todo description should be read from stdin when stdin is piped
 
 ## Commands
 
 ### `add`
 
-Create a task.
+Create a todo.
 
 ```bash
-tasklist add <title>
+todolist add <title>
 ```
 
 Arguments:
 
-- `<title>` — required task title
+- `<title>` — required todo title
 
 Flags:
 
@@ -39,27 +39,27 @@ Flags:
 
 Description input:
 
-- if stdin is piped, the CLI should read the task description from stdin
-- if stdin is not piped, the task should be created with an empty description
+- if stdin is piped, the CLI should read the todo description from stdin
+- if stdin is not piped, the todo should be created with an empty description
 
 Output:
 
-- on success, print the generated task ID to stdout
+- on success, print the generated todo ID to stdout
 - on error, print a message to stderr and exit with code 1
 
 Examples:
 
 ```bash
-tasklist add "Buy groceries"
-printf 'Need milk, eggs, and bread.\n' | tasklist add "Buy groceries"
+todolist add "Buy groceries"
+printf 'Need milk, eggs, and bread.\n' | todolist add "Buy groceries"
 ```
 
 ### `list`
 
-List tasks.
+List todos.
 
 ```bash
-tasklist list
+todolist list
 ```
 
 Arguments:
@@ -72,27 +72,27 @@ Flags:
 
 Output:
 
-- one task per line, tab-separated: `<id>\t<title>`
-- if there are no tasks, print nothing
+- one todo per line, tab-separated: `<id>\t<title>`
+- if there are no todos, print nothing
 
 Example output:
 
 ```
-task-7k9m	Buy groceries
-task-2w8x	Write proposal
+todo-7k9m	Buy groceries
+todo-2w8x	Write proposal
 ```
 
 ### `view`
 
-Show a single task.
+Show a single todo.
 
 ```bash
-tasklist view <task>
+todolist view <todo>
 ```
 
 Arguments:
 
-- `<task>` — required task ID
+- `<todo>` — required todo ID
 
 Flags:
 
@@ -100,15 +100,15 @@ Flags:
 
 Output:
 
-- print the raw task file as-is, including the YAML front matter and Markdown description
+- print the raw todo file as-is, including the YAML front matter and Markdown description
 - do not render Markdown
-- if the task does not exist, print an error to stderr and exit with code 1
+- if the todo does not exist, print an error to stderr and exit with code 1
 
 Example output:
 
 ```
 ---
-id: task-7k9m
+id: todo-7k9m
 title: Buy groceries
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
@@ -119,16 +119,16 @@ Need milk, eggs, and bread.
 
 ### `update`
 
-Update a task.
+Update a todo.
 
 ```bash
-tasklist update <task> [<title>]
-tasklist update <task> [title=<title>]
+todolist update <todo> [<title>]
+todolist update <todo> [title=<title>]
 ```
 
 Arguments:
 
-- `<task>` — required task ID
+- `<todo>` — required todo ID
 - `<title>` — optional replacement title
 
 Flags:
@@ -137,7 +137,7 @@ Flags:
 
 Description input:
 
-- if stdin is piped, the CLI should replace the task description with stdin contents
+- if stdin is piped, the CLI should replace the todo description with stdin contents
 - if stdin is not piped, the description should remain unchanged
 
 Behavior:
@@ -151,29 +151,29 @@ Behavior:
 Output:
 
 - on success, print nothing
-- if the task does not exist, print an error to stderr and exit with code 1
+- if the todo does not exist, print an error to stderr and exit with code 1
 - if no changes are provided, print an error to stderr and exit with code 1
 
 Examples:
 
 ```bash
-tasklist update task-7k9m "Buy groceries and snacks"
-tasklist update task-7k9m title="Buy groceries and snacks"
-printf 'Need milk, eggs, bread, and chips.\n' | tasklist update task-7k9m
-printf 'Need milk, eggs, bread, and chips.\n' | tasklist update task-7k9m title="Buy groceries and snacks"
+todolist update todo-7k9m "Buy groceries and snacks"
+todolist update todo-7k9m title="Buy groceries and snacks"
+printf 'Need milk, eggs, bread, and chips.\n' | todolist update todo-7k9m
+printf 'Need milk, eggs, bread, and chips.\n' | todolist update todo-7k9m title="Buy groceries and snacks"
 ```
 
 ### `delete`
 
-Delete a task.
+Delete a todo.
 
 ```bash
-tasklist delete <task>
+todolist delete <todo>
 ```
 
 Arguments:
 
-- `<task>` — required task ID
+- `<todo>` — required todo ID
 
 Flags:
 
@@ -181,23 +181,23 @@ Flags:
 
 Behavior:
 
-- delete the task file immediately without prompting
-- confirmation prompting and forced deletion behavior are deferred to the parent-child task grouping story, where deleting a parent task with children introduces cases that need protection
+- delete the todo file immediately without prompting
+- confirmation prompting and forced deletion behavior are deferred to the parent-child todo grouping story, where deleting a parent todo with children introduces cases that need protection
 
 Output:
 
 - on success, print nothing
-- if the task does not exist, print an error to stderr and exit with code 1
+- if the todo does not exist, print an error to stderr and exit with code 1
 
-## Task Format
+## Todo Format
 
-Each task is a Markdown file with YAML front matter and an optional Markdown description.
+Each todo is a Markdown file with YAML front matter and an optional Markdown description.
 
 Example:
 
 ```md
 ---
-id: task-7k9m
+id: todo-7k9m
 title: Buy groceries
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
@@ -208,21 +208,21 @@ Need milk, eggs, and bread.
 
 Front matter fields in the MVP:
 
-- `id` — unique task identifier; not updatable
+- `id` — unique todo identifier; not updatable
 - `title`
 - `createdAt` — set on creation to the current time; uses RFC 3339 in UTC
 - `lastModified` — set on creation to the current time; updated automatically on every successful `update`; uses RFC 3339 in UTC
 
 On creation, `createdAt` and `lastModified` should both be set to the same current time.
 
-The Markdown description is also part of the task and is updatable.
+The Markdown description is also part of the todo and is updatable.
 
-The MVP does not write `status` or `priority` fields to task files. Those are introduced in the task metadata story.
+The MVP does not write `status` or `priority` fields to todo files. Those are introduced in the todo metadata story.
 
 ## Error Handling
 
-- nonexistent task ID → error message to stderr, exit code 1
-- missing or inaccessible task directory → error message to stderr, exit code 1
+- nonexistent todo ID → error message to stderr, exit code 1
+- missing or inaccessible todo directory → error message to stderr, exit code 1
 - `update` with no replacement title and no description input provided → error message to stderr, exit code 1
 - all other errors → message to stderr, exit code 1
 - success → exit code 0
@@ -235,22 +235,22 @@ The following are explicitly **not** part of the MVP:
 - filtering in `list` — see `user-story-filtering.md`
 - `--json` global option — see `user-story-json.md`
 - `-d, --directory` global option — see `user-story-directory-selection.md`
-- `TASKLIST_DIRECTORY` environment variable — see `user-story-directory-selection.md`
-- `.tasks` config file and configurable ID prefix — see `user-story-directory-config.md`
+- `TODOLIST_DIRECTORY` environment variable — see `user-story-directory-selection.md`
+- `.todos` config file and configurable ID prefix — see `user-story-directory-config.md`
 - confirmation prompting and forced deletion controls on `delete` — see `user-story-parent-child.md`
 - parent-child relationships — see `user-story-parent-child.md`
 - dependencies — see `user-story-dep.md`
 
-In the MVP, the task directory is always `./tasks` and the ID prefix is always `task-`.
+In the MVP, the todo directory is always `./todo` and the ID prefix is always `todo-`.
 
 ## Scope
 
-- Markdown task files with YAML front matter
-- one task per file
+- Markdown todo files with YAML front matter
+- one todo per file
 - basic CRUD commands: `add`, `list`, `view`, `update`, `delete`
-- auto-generated task IDs with hardcoded `task-` prefix
+- auto-generated todo IDs with hardcoded `todo-` prefix
 - file naming as `<id>.md`
-- task directory is `./tasks`
+- todo directory is `./todo`
 - human-readable CLI output
 - description input through stdin for `add` and `update`
 - timestamps in RFC 3339 UTC

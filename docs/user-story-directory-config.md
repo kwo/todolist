@@ -1,26 +1,26 @@
-# User Story: task directory configuration
+# User Story: todo directory configuration
 
-Add per-directory tasklist configuration via `.tasks`.
+Add per-directory todolist configuration via `.todos`.
 
 ## User story
 
 As a user,
-I want a configuration file in my task directory,
-so that directory-specific behavior such as task ID prefixes can be customized.
+I want a configuration file in my todo directory,
+so that directory-specific behavior such as todo ID prefixes can be customized.
 
 ## Goal
 
-This work adds support for reading `.tasks` from the task directory.
+This work adds support for reading `.todos` from the todo directory.
 
 ## Configuration format
 
-The `.tasks` file is a flat `key=value` file.
+The `.todos` file is a flat `key=value` file.
 
 Supported keys:
 
-- `prefix` — the prefix used when generating task IDs
+- `prefix` — the prefix used when generating todo IDs
 
-If `prefix` is not set, the default prefix is `task-`.
+If `prefix` is not set, the default prefix is `todo-`.
 
 Example:
 
@@ -32,32 +32,32 @@ prefix=work-
 
 Given:
 
-- the selected task directory contains a `.tasks` file
+- the selected todo directory contains a `.todos` file
 
 Then:
 
-- tasklist reads `.tasks`
-- task ID generation uses the configured `prefix`
+- todolist reads `.todos`
+- todo ID generation uses the configured `prefix`
 
 Given:
 
-- no `.tasks` file exists or `prefix` is not set
+- no `.todos` file exists or `prefix` is not set
 
 Then:
 
-- the default prefix `task-` is used
+- the default prefix `todo-` is used
 
 ## Scope
 
-- `.tasks` file support
+- `.todos` file support
 - `prefix` setting
-- configurable task ID prefixes
+- configurable todo ID prefixes
 
 ## Dependencies
 
-- naturally paired with [User Story: task directory selection](user-story-directory-selection.md)
+- naturally paired with [User Story: todo directory selection](user-story-directory-selection.md)
 - complemented by [User Story: `init` command](user-story-init.md)
 
 ## Open issues
 
-1. The behavior for malformed `.tasks` files should be specified explicitly.
+1. The behavior for malformed `.todos` files should be specified explicitly.

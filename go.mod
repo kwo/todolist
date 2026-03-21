@@ -1,4 +1,4 @@
-module github.com/kwo/tasklist
+module github.com/kwo/todolist
 
 go 1.26.1
 

@@ -1,4 +1,4 @@
-package tasklist_test
+package todolist_test
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kwo/tasklist/pkg/tasklist"
+	"github.com/kwo/todolist/pkg/todolist"
 )
 
 func TestStoreGetDefaultsMissingMetadataFields(t *testing.T) {
@@ -15,7 +15,7 @@ func TestStoreGetDefaultsMissingMetadataFields(t *testing.T) {
 
 	dir := t.TempDir()
 	raw := `---
-id: task-7k9m
+id: todo-7k9m
 title: Buy groceries
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
@@ -24,22 +24,22 @@ lastModified: 2026-03-18T10:00:00Z
 Need milk, eggs, and bread.
 `
 
-	path := filepath.Join(dir, "task-7k9m.md")
+	path := filepath.Join(dir, "todo-7k9m.md")
 	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatalf("write task file: %v", err)
+		t.Fatalf("write todo file: %v", err)
 	}
 
-	value, err := tasklist.NewStore(dir).Get("task-7k9m")
+	value, err := todolist.NewStore(dir).Get("todo-7k9m")
 	if err != nil {
-		t.Fatalf("get task: %v", err)
+		t.Fatalf("get todo: %v", err)
 	}
 
-	if value.Status != tasklist.DefaultStatus {
-		t.Fatalf("expected default status %q, got %q", tasklist.DefaultStatus, value.Status)
+	if value.Status != todolist.DefaultStatus {
+		t.Fatalf("expected default status %q, got %q", todolist.DefaultStatus, value.Status)
 	}
 
-	if value.Priority != tasklist.DefaultPriority {
-		t.Fatalf("expected default priority %d, got %d", tasklist.DefaultPriority, value.Priority)
+	if value.Priority != todolist.DefaultPriority {
+		t.Fatalf("expected default priority %d, got %d", todolist.DefaultPriority, value.Priority)
 	}
 }
 
@@ -47,8 +47,8 @@ func TestStoreCreateSerializesMetadataFields(t *testing.T) {
 	t.Helper()
 
 	dir := t.TempDir()
-	value := tasklist.Task{
-		ID:           "task-7k9m",
+	value := todolist.Todo{
+		ID:           "todo-7k9m",
 		Title:        "Buy groceries",
 		Status:       "wip",
 		Priority:     2,
@@ -57,14 +57,14 @@ func TestStoreCreateSerializesMetadataFields(t *testing.T) {
 		Description:  "Need milk, eggs, and bread.\n",
 	}
 
-	if err := tasklist.NewStore(dir).Create(value); err != nil {
-		t.Fatalf("create task: %v", err)
+	if err := todolist.NewStore(dir).Create(value); err != nil {
+		t.Fatalf("create todo: %v", err)
 	}
 
 	//nolint:gosec // Test reads a file created in a temporary directory.
-	raw, err := os.ReadFile(filepath.Join(dir, "task-7k9m.md"))
+	raw, err := os.ReadFile(filepath.Join(dir, "todo-7k9m.md"))
 	if err != nil {
-		t.Fatalf("read task file: %v", err)
+		t.Fatalf("read todo file: %v", err)
 	}
 
 	text := string(raw)

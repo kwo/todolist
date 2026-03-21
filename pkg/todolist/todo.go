@@ -1,6 +1,6 @@
-// Package tasklist provides the core task model, storage, and ID generation
-// for the tasklist CLI.
-package tasklist
+// Package todolist provides the core todo model, storage, and ID generation
+// for the todolist CLI.
+package todolist
 
 import (
 	"fmt"
@@ -8,23 +8,23 @@ import (
 )
 
 const (
-	// DefaultStatus is the status used when a task omits a status value.
+	// DefaultStatus is the status used when a todo omits a status value.
 	DefaultStatus = "todo"
-	// DefaultPriority is the priority used when a task omits a priority value.
+	// DefaultPriority is the priority used when a todo omits a priority value.
 	DefaultPriority = 5
 )
 
-// Task is a single task stored as a Markdown file with YAML front matter.
-type Task struct {
-	// ID is the stable task identifier and filename prefix.
+// Todo is a single todo stored as a Markdown file with YAML front matter.
+type Todo struct {
+	// ID is the stable todo identifier and filename prefix.
 	ID string
-	// Title is the human-readable task title.
+	// Title is the human-readable todo title.
 	Title string
-	// Status is the workflow state of the task.
+	// Status is the workflow state of the todo.
 	Status string
-	// Priority is the task priority where 1 is highest and 5 is lowest.
+	// Priority is the todo priority where 1 is highest and 5 is lowest.
 	Priority int
-	// CreatedAt is the task creation timestamp in UTC.
+	// CreatedAt is the todo creation timestamp in UTC.
 	CreatedAt time.Time
 	// LastModified is the timestamp of the most recent successful update in UTC.
 	LastModified time.Time
@@ -37,8 +37,8 @@ func NormalizeTimestamp(value time.Time) time.Time {
 	return value.UTC().Truncate(time.Second)
 }
 
-// NormalizeTask normalizes stored task fields to their canonical representation.
-func NormalizeTask(value Task) Task {
+// NormalizeTodo normalizes stored todo fields to their canonical representation.
+func NormalizeTodo(value Todo) Todo {
 	if value.Status == "" {
 		value.Status = DefaultStatus
 	}
@@ -53,7 +53,7 @@ func NormalizeTask(value Task) Task {
 	return value
 }
 
-// ValidateStatus reports whether status is one of the supported task status values.
+// ValidateStatus reports whether status is one of the supported todo status values.
 func ValidateStatus(status string) error {
 	switch status {
 	case "todo", "wip", "done":

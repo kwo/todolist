@@ -1,4 +1,4 @@
-package tasklist
+package todolist
 
 import (
 	"fmt"
@@ -8,27 +8,27 @@ import (
 
 const (
 	alphabet  = "0123456789abcdefghjkmnpqrstvwxyz"
-	prefix    = "task-"
+	prefix    = "todo-"
 	visibleID = 4
 )
 
-// ExistsFunc reports whether a generated task ID already exists.
+// ExistsFunc reports whether a generated todo ID already exists.
 type ExistsFunc func(string) bool
 
-// GenerateID returns a unique task ID for task, retrying with incrementing nonce values on collision.
-func GenerateID(task Task, exists ExistsFunc) string {
+// GenerateID returns a unique todo ID for todo, retrying with incrementing nonce values on collision.
+func GenerateID(todo Todo, exists ExistsFunc) string {
 	for nonce := 0; ; nonce++ {
-		id := prefix + suffix(buildSeed(task, nonce))
+		id := prefix + suffix(buildSeed(todo, nonce))
 		if !exists(id) {
 			return id
 		}
 	}
 }
 
-func buildSeed(task Task, nonce int) string {
-	createdAt := NormalizeTimestamp(task.CreatedAt)
+func buildSeed(todo Todo, nonce int) string {
+	createdAt := NormalizeTimestamp(todo.CreatedAt)
 
-	return fmt.Sprintf("%s|%s|%d|%d", task.Title, task.Description, createdAt.Unix(), nonce)
+	return fmt.Sprintf("%s|%s|%d|%d", todo.Title, todo.Description, createdAt.Unix(), nonce)
 }
 
 func suffix(seed string) string {

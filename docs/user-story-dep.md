@@ -1,20 +1,20 @@
-# User Story: task dependencies
+# User Story: todo dependencies
 
-Add dependency management and dependency inspection to tasklist.
+Add dependency management and dependency inspection to todolist.
 
 ## User stories
 
 ### Dependencies
 
 As a user,
-I want to record that one task depends on another,
+I want to record that one todo depends on another,
 so that I can understand what is blocked and what is ready to work on.
 
 ### Dependency inspection
 
 As a user,
 I want to inspect dependency relationships,
-so that I can see what a task depends on, what depends on it, and whether there are cycles.
+so that I can see what a todo depends on, what depends on it, and whether there are cycles.
 
 ## Goal
 
@@ -29,20 +29,20 @@ This work adds:
 ### Dependency command
 
 ```bash
-tasklist dep <subcommand>
+todolist dep <subcommand>
 ```
 
 Dependency commands inherit the root CLI's global options, including `-d, --directory`. In the command-first CLI, those global options appear after the root command. Example:
 
 ```bash
-tasklist dep -d ./work-tasks list task-7k9m
+todolist dep -d ./work-todos list todo-7k9m
 ```
 
-## Task format additions
+## Todo format additions
 
-This user story extends task front matter with:
+This user story extends todo front matter with:
 
-- `dependsOn` — optional list of task IDs this task depends on
+- `dependsOn` — optional list of todo IDs this todo depends on
 
 This user story also adds a computed field:
 
@@ -52,12 +52,12 @@ Example:
 
 ```md
 ---
-id: task-7k9m
+id: todo-7k9m
 title: Buy groceries
 status: todo
 priority: 2
 dependsOn:
-  - task-2w8x
+  - todo-2w8x
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
 ---
@@ -71,18 +71,18 @@ Need milk, eggs, and bread.
 
 Given:
 
-- one task depends on another
+- one todo depends on another
 
 Then:
 
 - the relationship is stored in `dependsOn`
-- the meaning is: `<task>` depends on `<depends-on>`
+- the meaning is: `<todo>` depends on `<depends-on>`
 
 ### Readiness
 
 Given:
 
-- a task has zero or more dependencies
+- a todo has zero or more dependencies
 
 Then:
 
@@ -106,18 +106,18 @@ Then:
 ### `dep add`
 
 ```bash
-tasklist dep add <task> <depends-on>
+todolist dep add <todo> <depends-on>
 ```
 
 Behavior:
 
 - add a dependency
-- meaning: `<task>` depends on `<depends-on>`
+- meaning: `<todo>` depends on `<depends-on>`
 
 ### `dep remove`
 
 ```bash
-tasklist dep remove <task> <depends-on>
+todolist dep remove <todo> <depends-on>
 ```
 
 Alias:
@@ -131,25 +131,25 @@ Behavior:
 ### `dep list`
 
 ```bash
-tasklist dep list <task> [direction=down|up|both]
+todolist dep list <todo> [direction=down|up|both]
 ```
 
 Behavior:
 
-- list dependencies for a task
-- `direction=down` = what this task depends on
-- `direction=up` = what depends on this task
+- list dependencies for a todo
+- `direction=down` = what this todo depends on
+- `direction=up` = what depends on this todo
 - `direction=both` = both directions
 
 ### `dep tree`
 
 ```bash
-tasklist dep tree <task> [direction=down|up|both] [max-depth=<n>] [format=text|mermaid]
+todolist dep tree <todo> [direction=down|up|both] [max-depth=<n>] [format=text|mermaid]
 ```
 
 Behavior:
 
-- show a dependency tree rooted at the task
+- show a dependency tree rooted at the todo
 - support direction control
 - support maximum traversal depth
 - support text and Mermaid output
@@ -157,7 +157,7 @@ Behavior:
 ### `dep cycles`
 
 ```bash
-tasklist dep cycles
+todolist dep cycles
 ```
 
 Behavior:
@@ -166,12 +166,12 @@ Behavior:
 
 ## Scope
 
-- `dependsOn` support in task metadata
+- `dependsOn` support in todo metadata
 - computed `ready` field
 - dependency traversal and visualization
 - dependency cycle detection
 
 ## Open issues
 
-1. Delete behavior with dependencies is unspecified. If a task is deleted and other tasks depend on it via `dependsOn`, what should happen to those references?
+1. Delete behavior with dependencies is unspecified. If a todo is deleted and other todos depend on it via `dependsOn`, what should happen to those references?
 2. The handling of dependencies whose status field is missing should be made explicit. Presumably they should be treated as `status: todo`.
