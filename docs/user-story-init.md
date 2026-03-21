@@ -21,7 +21,7 @@ tasklist init
 Later work may extend this with global directory selection, for example:
 
 ```bash
-tasklist -d ./work-tasks init
+tasklist init -d ./work-tasks
 ```
 
 ## Expected behavior

@@ -17,8 +17,8 @@ This work adds a global directory option and environment variable support.
 Global option:
 
 ```bash
-tasklist -d <dir> <command>
-tasklist --directory <dir> <command>
+tasklist <command> -d <dir>
+tasklist <command> --directory <dir>
 ```
 
 Environment variable:
@@ -27,12 +27,12 @@ Environment variable:
 TASKLIST_DIRECTORY=<dir> tasklist <command>
 ```
 
-Because `--directory` is global, it appears before the subcommand.
+The CLI is command-first, so `--directory` appears after the command.
 
 Example:
 
 ```bash
-tasklist -d ./work-tasks list
+tasklist list -d ./work-tasks
 ```
 
 ## Acceptance criteria

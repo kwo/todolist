@@ -65,7 +65,7 @@ Then:
 
 - deletion should warn and fail by default
 - the parent cannot be deleted until its child tasks are moved out of that parent
-- if deletion is invoked with `-f` or `--force`, deletion may proceed and should also delete all child tasks
+- if deletion is invoked with an explicit forced-deletion control such as `force=true`, deletion may proceed and should also delete all child tasks
 
 ## Scope
 

@@ -17,36 +17,40 @@ This work adds filtering to `list` on top of task metadata.
 ### `list`
 
 ```bash
-tasklist list [--status <status>] [--priority <priority-filter>]
+tasklist list [<status-filter>] [<priority-filter>]
+tasklist list [status=<status-filter>] [priority=<priority-filter>]
 ```
 
 Behavior:
 
 - retain the default compact human-readable list format
 - apply filters before rendering output
-- `--status <status>` includes only tasks with that status
-- `--status !<status>` excludes tasks with that status
-- `--priority <n>` includes only tasks with that priority
-- `--priority .<n>` excludes tasks with that priority
-- `--priority +<n>` includes only tasks with a numerically greater priority value than `n`
-- `--priority -<n>` includes only tasks with a numerically lower priority value than `n`
+- a positional status filter includes only tasks with that status
+- a positional `!<status>` filter excludes tasks with that status
+- a positional priority filter `<n>` includes only tasks with that priority
+- a positional priority filter `.<n>` excludes tasks with that priority
+- a positional priority filter `+<n>` includes only tasks with a numerically greater priority value than `n`
+- a positional priority filter `-<n>` includes only tasks with a numerically lower priority value than `n`
+- explicit `status=<status-filter>` and `priority=<priority-filter>` notation may also be used
 
 Examples:
 
 ```bash
-tasklist list --status done
-tasklist list --status '!done'
-tasklist list --priority 1
-tasklist list --priority .3
-tasklist list --priority +3
-tasklist list --priority=-3
+tasklist list done
+tasklist list '!done'
+tasklist list 1
+tasklist list .3
+tasklist list +3
+tasklist list priority=-3
+tasklist list status=done
+tasklist list priority=+3
 ```
 
 Because priorities are numeric and `1` is the highest priority while `5` is the lowest priority:
 
-- `--priority +0` means priorities `1` through `5`
-- `--priority +3` means priorities `4` and `5`
-- `--priority -3` means priorities `1` and `2`
+- `+0` means priorities `1` through `5`
+- `+3` means priorities `4` and `5`
+- `-3` means priorities `1` and `2`
 
 ## Acceptance criteria
 
@@ -58,7 +62,7 @@ Given:
 
 When:
 
-- the user runs `tasklist list --status <status>`
+- the user runs `tasklist list <status>` or `tasklist list status=<status>`
 
 Then:
 
@@ -66,7 +70,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --status !<status>`
+- the user runs `tasklist list !<status>` or `tasklist list status=!<status>`
 
 Then:
 
@@ -80,7 +84,7 @@ Given:
 
 When:
 
-- the user runs `tasklist list --priority <n>`
+- the user runs `tasklist list <n>` or `tasklist list priority=<n>`
 
 Then:
 
@@ -88,7 +92,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority .<n>`
+- the user runs `tasklist list .<n>` or `tasklist list priority=.<n>`
 
 Then:
 
@@ -96,7 +100,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority +<n>`
+- the user runs `tasklist list +<n>` or `tasklist list priority=+<n>`
 
 Then:
 
@@ -104,7 +108,7 @@ Then:
 
 When:
 
-- the user runs `tasklist list --priority -<n>`
+- the user runs `tasklist list -<n>` or `tasklist list priority=-<n>`
 
 Then:
 
@@ -121,6 +125,5 @@ Then:
 
 ## Open issues
 
-1. Shells may require quoting filters such as `--status '!done'`.
-2. For `--priority -<n>`, using an equals form such as `--priority=-3` is more reliable than passing `-3` as a separate argument token.
--3` as a separate argument token.
+1. Shells may require quoting filters such as `!done`.
+2. It should be specified whether a bare value like `-3` is always accepted as a priority filter or whether `priority=-3` should be the preferred explicit form.

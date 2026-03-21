@@ -32,10 +32,10 @@ This work adds:
 tasklist dep <subcommand>
 ```
 
-Dependency commands inherit the root CLI's global options, including `-d, --directory`. Because `--directory` is global, it should appear before the subcommand. Example:
+Dependency commands inherit the root CLI's global options, including `-d, --directory`. In the command-first CLI, those global options appear after the root command. Example:
 
 ```bash
-tasklist -d ./work-tasks dep list task-7k9m
+tasklist dep -d ./work-tasks list task-7k9m
 ```
 
 ## Task format additions
@@ -131,20 +131,20 @@ Behavior:
 ### `dep list`
 
 ```bash
-tasklist dep list <task> [--direction down|up|both]
+tasklist dep list <task> [direction=down|up|both]
 ```
 
 Behavior:
 
 - list dependencies for a task
-- `--direction down` = what this task depends on
-- `--direction up` = what depends on this task
-- `--direction both` = both directions
+- `direction=down` = what this task depends on
+- `direction=up` = what depends on this task
+- `direction=both` = both directions
 
 ### `dep tree`
 
 ```bash
-tasklist dep tree <task> [--direction down|up|both] [--max-depth <n>] [--format text|mermaid]
+tasklist dep tree <task> [direction=down|up|both] [max-depth=<n>] [format=text|mermaid]
 ```
 
 Behavior:

@@ -104,10 +104,10 @@ The CLI should read and write task Markdown files from a task directory determin
 2. `TASKLIST_DIRECTORY` environment variable
 3. default `./tasks`
 
-The `-d, --directory` option is global, so it should appear before the subcommand. Example:
+The CLI is command-first, so global options are written after the command. Example:
 
 ```bash
-tasklist -d ./work-tasks list
+tasklist list -d ./work-tasks
 ```
 
 The task directory may also contain a `.tasks` configuration file.

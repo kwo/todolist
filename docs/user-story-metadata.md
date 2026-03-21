@@ -43,13 +43,15 @@ Need milk, eggs, and bread.
 ### `add`
 
 ```bash
-tasklist add <title> [--status <status>] [--priority <priority>]
+tasklist add <title> [<status>] [<priority>]
+tasklist add title=<title> [status=<status>] [priority=<priority>]
 ```
 
 ### `update`
 
 ```bash
-tasklist update <task> [--title <title>] [--status <status>] [--priority <priority>]
+tasklist update <task> [<title>] [<status>] [<priority>]
+tasklist update <task> [title=<title>] [status=<status>] [priority=<priority>]
 ```
 
 ### `view`
@@ -74,8 +76,8 @@ Then:
 
 - supported values are `todo`, `wip`, and `done`, matching the shared status values documented in `README.md`
 - if status is omitted, it defaults to `todo`
-- `add` may set status
-- `update` may replace status
+- `add` may set status using inferred values or explicit `status=<status>` notation
+- `update` may replace status using inferred values or explicit `status=<status>` notation
 
 ### Priority
 
@@ -87,8 +89,8 @@ Then:
 
 - supported values are `1`, `2`, `3`, `4`, and `5`, matching the shared priority values documented in `README.md`
 - if the `priority` attribute is omitted, it defaults to `5`
-- `add` may set priority
-- `update` may replace priority
+- `add` may set priority using inferred values or explicit `priority=<priority>` notation
+- `update` may replace priority using inferred values or explicit `priority=<priority>` notation
 
 ### Timestamps
 
@@ -104,8 +106,8 @@ Then:
 
 - `status` metadata
 - `priority` metadata
-- `add` support for `--status` and `--priority`
-- `update` support for `--status` and `--priority`
+- `add` support for inferred `status` and `priority` values, plus explicit `status=...` and `priority=...` notation
+- `update` support for inferred `title`, `status`, and `priority` values, plus explicit `title=...`, `status=...`, and `priority=...` notation
 - `view` output includes metadata values
 
 ## Open issues

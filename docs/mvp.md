@@ -7,14 +7,16 @@ The MVP focuses on the smallest useful version of Task List: basic task CRUD bac
 For the MVP, the CLI should optimize for fast human typing:
 
 - use **arguments** for the main thing a command acts on
-- use **flags** only for optional behavior changes
+- use **command-first parsing**
+- use **explicit `key=value` notation** only when disambiguation is needed
 - use **stdin** for Markdown description input instead of a dedicated description flag
 
 That means:
 
 - task IDs should be positional arguments for `view`, `update`, and `delete`
 - the task title should be a positional argument for `add`
-- `update` should use flags only for fields that are optional to change
+- `update` should accept an optional replacement title as a command value
+- `update` may also accept `title=<title>` for explicit assignment
 - the task description should be read from stdin when stdin is piped
 
 ## Commands
@@ -120,16 +122,18 @@ Need milk, eggs, and bread.
 Update a task.
 
 ```bash
-tasklist update <task> [--title <title>]
+tasklist update <task> [<title>]
+tasklist update <task> [title=<title>]
 ```
 
 Arguments:
 
 - `<task>` — required task ID
+- `<title>` — optional replacement title
 
 Flags:
 
-- `--title <title>` — replace the task title
+- none in the MVP
 
 Description input:
 
@@ -139,7 +143,9 @@ Description input:
 Behavior:
 
 - `id` is not updatable
-- the command should require at least one change, either `--title` or piped stdin
+- if a command value is provided and it is not otherwise recognized, it is assigned as the replacement title
+- `title=<title>` may be used for explicit assignment
+- the command should require at least one change, either a replacement title or piped stdin
 - a successful update should automatically set `lastModified` to the current time
 
 Output:
@@ -151,9 +157,10 @@ Output:
 Examples:
 
 ```bash
-tasklist update task-7k9m --title "Buy groceries and snacks"
+tasklist update task-7k9m "Buy groceries and snacks"
+tasklist update task-7k9m title="Buy groceries and snacks"
 printf 'Need milk, eggs, bread, and chips.\n' | tasklist update task-7k9m
-printf 'Need milk, eggs, bread, and chips.\n' | tasklist update task-7k9m --title "Buy groceries and snacks"
+printf 'Need milk, eggs, bread, and chips.\n' | tasklist update task-7k9m title="Buy groceries and snacks"
 ```
 
 ### `delete`
@@ -175,7 +182,7 @@ Flags:
 Behavior:
 
 - delete the task file immediately without prompting
-- confirmation prompting and `--force` are deferred to the parent-child task grouping story, where deleting a parent task with children introduces cases that need protection
+- confirmation prompting and forced deletion behavior are deferred to the parent-child task grouping story, where deleting a parent task with children introduces cases that need protection
 
 Output:
 
@@ -216,7 +223,7 @@ The MVP does not write `status` or `priority` fields to task files. Those are in
 
 - nonexistent task ID → error message to stderr, exit code 1
 - missing or inaccessible task directory → error message to stderr, exit code 1
-- `update` with no changes provided → error message to stderr, exit code 1
+- `update` with no replacement title and no description input provided → error message to stderr, exit code 1
 - all other errors → message to stderr, exit code 1
 - success → exit code 0
 
@@ -230,7 +237,7 @@ The following are explicitly **not** part of the MVP:
 - `-d, --directory` global option — see `user-story-directory-selection.md`
 - `TASKLIST_DIRECTORY` environment variable — see `user-story-directory-selection.md`
 - `.tasks` config file and configurable ID prefix — see `user-story-directory-config.md`
-- confirmation prompting and `--force` on `delete` — see `user-story-parent-child.md`
+- confirmation prompting and forced deletion controls on `delete` — see `user-story-parent-child.md`
 - parent-child relationships — see `user-story-parent-child.md`
 - dependencies — see `user-story-dep.md`
 

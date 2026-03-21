@@ -17,15 +17,15 @@ This work adds a global `--json` option for supported commands.
 Global option:
 
 ```bash
-tasklist --json <command>
+tasklist <command> --json
 ```
 
 Examples:
 
 ```bash
-tasklist --json list
-tasklist --json view task-7k9m
-tasklist --json add "Buy groceries"
+tasklist list --json
+tasklist view --json task-7k9m
+tasklist add --json "Buy groceries"
 ```
 
 ## Acceptance criteria
@@ -37,7 +37,7 @@ Given:
 Then:
 
 - command results are written as JSON instead of human-readable text
-- the option is global, so it appears before the subcommand
+- the option is global and, in the command-first CLI, appears after the command
 
 Supported commands:
 
