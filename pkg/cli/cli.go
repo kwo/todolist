@@ -647,9 +647,9 @@ func parseStatusFilter(raw string) (string, bool, error) {
 		return "", false, nil
 	}
 
-	exclude := strings.HasPrefix(value, "!")
+	exclude := strings.HasSuffix(value, "!")
 	if exclude {
-		value = strings.TrimSpace(strings.TrimPrefix(value, "!"))
+		value = strings.TrimSpace(strings.TrimSuffix(value, "!"))
 	}
 
 	if err := todolist.ValidateStatus(value); err != nil {
@@ -675,14 +675,18 @@ func parsePriorityFilter(raw string) (func(int) bool, error) {
 	}
 
 	operator := "="
-	if strings.HasPrefix(value, ".") || strings.HasPrefix(value, "+") || strings.HasPrefix(value, "-") {
+	switch {
+	case hasPriorityFilterPrefix(value):
 		operator = value[:1]
 		value = strings.TrimSpace(value[1:])
+	case hasPriorityFilterSuffix(value):
+		operator = value[len(value)-1:]
+		value = strings.TrimSpace(value[:len(value)-1])
 	}
 
 	priority, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid priority filter %q: must use n, .n, +n, or -n", raw)
+		return nil, fmt.Errorf("invalid priority filter %q: must use n, n!, n+, or n-", raw)
 	}
 
 	if priority < 0 || priority > todolist.DefaultPriority {
@@ -692,7 +696,7 @@ func parsePriorityFilter(raw string) (func(int) bool, error) {
 	switch operator {
 	case "=":
 		return func(candidate int) bool { return candidate == priority }, nil
-	case ".":
+	case ".", "!":
 		return func(candidate int) bool { return candidate != priority }, nil
 	case "+":
 		return func(candidate int) bool { return candidate > priority }, nil
@@ -772,6 +776,13 @@ func recognizeStatusFilter(raw string) (string, bool, bool, error) {
 		return "", false, false, nil
 	}
 
+	if strings.HasSuffix(value, "!") {
+		status, exclude, err := parseStatusFilter(value)
+		if err == nil {
+			return status, exclude, true, nil
+		}
+	}
+
 	if strings.HasPrefix(value, "!") {
 		status, exclude, err := parseStatusFilter(value)
 
@@ -809,12 +820,33 @@ func isPriorityFilterShape(value string) bool {
 	}
 
 	if len(value) < 2 {
-		return value == "." || value == "+" || value == "-"
+		return value == "." || value == "+" || value == "-" || value == "!"
 	}
 
+	if hasPriorityFilterPrefix(value) {
+		return isDigits(strings.TrimSpace(value[1:])) || strings.TrimSpace(value[1:]) == ""
+	}
+
+	if hasPriorityFilterSuffix(value) {
+		return isDigits(strings.TrimSpace(value[:len(value)-1])) || strings.TrimSpace(value[:len(value)-1]) == ""
+	}
+
+	return false
+}
+
+func hasPriorityFilterPrefix(value string) bool {
 	switch value[0] {
 	case '.', '+', '-':
-		return isDigits(strings.TrimSpace(value[1:])) || strings.TrimSpace(value[1:]) == ""
+		return true
+	default:
+		return false
+	}
+}
+
+func hasPriorityFilterSuffix(value string) bool {
+	switch value[len(value)-1] {
+	case '!', '+', '-':
+		return true
 	default:
 		return false
 	}

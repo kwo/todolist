@@ -36,7 +36,7 @@ todolist add "Buy groceries"
 todolist add "Buy groceries" wip 2
 todolist add title=done
 todolist list done
-todolist list +3
+todolist list 3+
 todolist update todo-7k9m "Buy groceries and snacks" done 1
 todolist update todo-7k9m title=done
 todolist view todo-7k9m
@@ -93,9 +93,9 @@ The parser should recognize these kinds of values:
 - priority
   - an integer from `1` through `5`
 - priority filter
-  - values already defined by the filtering story, such as `3`, `.3`, `+3`, or `-3`
+  - values already defined by the filtering story, such as `3`, `3!`, `3+`, or `3-`
 - status filter
-  - values already defined by the filtering story, such as `done` or `!done`
+  - values already defined by the filtering story, such as `done` or `done!`
 - free-text value
   - any remaining value that does not match a recognized typed value and can be assigned to a free-text field such as `title`
 
@@ -218,11 +218,11 @@ Examples:
 
 ```bash
 todolist list done
-todolist list !done
+todolist list 'done!'
 todolist list 3
-todolist list +3
+todolist list '3!'
 todolist list status=done
-todolist list priority=+3
+todolist list priority=3+
 ```
 
 ### `view`

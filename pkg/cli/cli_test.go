@@ -360,7 +360,7 @@ func TestListFiltersByStatus(t *testing.T) {
 	}
 }
 
-func TestListExcludesStatusWithBangPrefix(t *testing.T) {
+func TestListExcludesStatusWithBangSuffix(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
@@ -368,7 +368,7 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
 
-	exitCode := app.Run([]string{"list", "!done"})
+	exitCode := app.Run([]string{"list", "done!"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -380,6 +380,25 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 
 	if strings.Contains(output, "second todo") {
 		t.Fatalf("expected done todo to be excluded, got %q", output)
+	}
+}
+
+func TestListRejectsStatusBangPrefix(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"list", "!done"})
+	if exitCode != 1 {
+		t.Fatalf("expected list to fail, got %d", exitCode)
+	}
+
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout, got %q", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), `invalid status "!done": must be one of todo, wip, done`) {
+		t.Fatalf("expected invalid status error, got %q", stderr.String())
 	}
 }
 
@@ -414,7 +433,7 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority two", "2"})
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority four", "4"})
 
-	exitCode := app.Run([]string{"list", "-3"})
+	exitCode := app.Run([]string{"list", "3-"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -429,6 +448,29 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 	}
 }
 
+func TestListFiltersPriorityNotEqual(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority three", "3"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority four", "4"})
+
+	exitCode := app.Run([]string{"list", "3!"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "priority three") {
+		t.Fatalf("expected priority 3 todo to be filtered out, got %q", output)
+	}
+
+	if !strings.Contains(output, "priority four") {
+		t.Fatalf("expected priority 4 todo to be included, got %q", output)
+	}
+}
+
 func TestListSupportsExplicitFilters(t *testing.T) {
 	t.Helper()
 
@@ -438,7 +480,7 @@ func TestListSupportsExplicitFilters(t *testing.T) {
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done", "4"})
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "third todo", "todo", "4"})
 
-	exitCode := app.Run([]string{"list", "status=done", "priority=+3"})
+	exitCode := app.Run([]string{"list", "status=done", "priority=3+"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -471,7 +513,7 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `invalid priority filter ".": must use n, .n, +n, or -n`) {
+	if !strings.Contains(stderr.String(), `invalid priority filter ".": must use n, n!, n+, or n-`) {
 		t.Fatalf("expected invalid priority filter error, got %q", stderr.String())
 	}
 }

@@ -26,31 +26,31 @@ Behavior:
 - retain the default compact human-readable list format
 - apply filters before rendering output
 - a positional status filter includes only todos with that status
-- a positional `!<status>` filter excludes todos with that status
+- a positional `<status>!` filter excludes todos with that status
 - a positional priority filter `<n>` includes only todos with that priority
-- a positional priority filter `.<n>` excludes todos with that priority
-- a positional priority filter `+<n>` includes only todos with a numerically greater priority value than `n`
-- a positional priority filter `-<n>` includes only todos with a numerically lower priority value than `n`
+- a positional priority filter `<n>!` excludes todos with that priority
+- a positional priority filter `<n>+` includes only todos with a numerically greater priority value than `n`
+- a positional priority filter `<n>-` includes only todos with a numerically lower priority value than `n`
 - explicit `status=<status-filter>` and `priority=<priority-filter>` notation may also be used
 
 Examples:
 
 ```bash
 todolist list done
-todolist list '!done'
+todolist list 'done!'
 todolist list 1
-todolist list .3
-todolist list +3
-todolist list priority=-3
+todolist list '3!'
+todolist list 3+
+todolist list priority=3-
 todolist list status=done
-todolist list priority=+3
+todolist list priority=3+
 ```
 
 Because priorities are numeric and `1` is the highest priority while `5` is the lowest priority:
 
-- `+0` means priorities `1` through `5`
-- `+3` means priorities `4` and `5`
-- `-3` means priorities `1` and `2`
+- `0+` means priorities `1` through `5`
+- `3+` means priorities `4` and `5`
+- `3-` means priorities `1` and `2`
 
 ## Acceptance criteria
 
@@ -70,7 +70,7 @@ Then:
 
 When:
 
-- the user runs `todolist list !<status>` or `todolist list status=!<status>`
+- the user runs `todolist list <status>!` or `todolist list status=<status>!`
 
 Then:
 
@@ -92,7 +92,7 @@ Then:
 
 When:
 
-- the user runs `todolist list .<n>` or `todolist list priority=.<n>`
+- the user runs `todolist list <n>!` or `todolist list priority=<n>!`
 
 Then:
 
@@ -100,7 +100,7 @@ Then:
 
 When:
 
-- the user runs `todolist list +<n>` or `todolist list priority=+<n>`
+- the user runs `todolist list <n>+` or `todolist list priority=<n>+`
 
 Then:
 
@@ -108,7 +108,7 @@ Then:
 
 When:
 
-- the user runs `todolist list -<n>` or `todolist list priority=-<n>`
+- the user runs `todolist list <n>-` or `todolist list priority=<n>-`
 
 Then:
 
@@ -125,5 +125,5 @@ Then:
 
 ## Open issues
 
-1. Shells may require quoting filters such as `!done`.
-2. It should be specified whether a bare value like `-3` is always accepted as a priority filter or whether `priority=-3` should be the preferred explicit form.
+1. Shells may require quoting filters such as `done!`.
+2. Shells may require quoting filters such as `3!`.
