@@ -1,10 +1,10 @@
 ---
 id: todo-hhsq
 title: 'User Story: list output status, priority, and title width'
-status: todo
+status: done
 priority: 3
 createdAt: "2026-03-23T18:58:14Z"
-lastModified: "2026-03-23T19:05:24Z"
+lastModified: "2026-03-23T19:07:18Z"
 ---
 
 # User Story: list output status, priority, and title width

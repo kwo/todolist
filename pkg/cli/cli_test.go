@@ -53,7 +53,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\tBuy groceries\n"
+	expectedLine := id + "\t2\twip\tBuy groceries\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
@@ -496,6 +496,75 @@ func TestUpdateMissingTodoFailsBeforeNoChangeValidation(t *testing.T) {
 
 	if !strings.Contains(stderr.String(), `read todo "todo-7k9m"`) {
 		t.Fatalf("expected missing todo error, got %q", stderr.String())
+	}
+}
+
+func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries", "wip", "2"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	expectedLine := id + "\t2\twip\tBuy groceries\n"
+	if stdout.String() != expectedLine {
+		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
+	}
+}
+
+func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	longTitle := "Investigate how to reconcile customer billing exports across regions and vendors"
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", longTitle, "todo", "3"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	fields := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\t")
+	if len(fields) != 4 {
+		t.Fatalf("expected 4 list columns, got %d in %q", len(fields), stdout.String())
+	}
+
+	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" {
+		t.Fatalf("unexpected list columns %q", stdout.String())
+	}
+
+	if len(fields[3]) != 60 {
+		t.Fatalf("expected truncated title length 60, got %d in %q", len(fields[3]), fields[3])
+	}
+
+	if !strings.HasSuffix(fields[3], "...") {
+		t.Fatalf("expected truncated title to end with ellipsis, got %q", fields[3])
+	}
+
+	if strings.Contains(fields[3], "vendors") {
+		t.Fatalf("expected truncated title not to include full title, got %q", fields[3])
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", id})
+	if exitCode != 0 {
+		t.Fatalf("expected json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var viewed jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &viewed); err != nil {
+		t.Fatalf("unmarshal view json: %v; output=%q", err, stdout.String())
+	}
+
+	if viewed.Title != longTitle {
+		t.Fatalf("expected full title in json, got %q", viewed.Title)
 	}
 }
 
