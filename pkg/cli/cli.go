@@ -62,6 +62,8 @@ type deleteCommand struct {
 	Todo string
 }
 
+type initCommand struct{}
+
 type listCommand struct {
 	StatusFilter   string
 	ExcludeStatus  bool
@@ -149,6 +151,17 @@ func parseArgs(args []string, app *App) (parsedCommand, error) {
 		runner, addErr := parseAddCommand(commandValues)
 		if addErr != nil {
 			return parsedCommand{}, addErr
+		}
+
+		parsed.runner = runner
+	case "init":
+		if parsed.help {
+			return parsed, nil
+		}
+
+		runner, initErr := parseNoValueCommand(commandValues)
+		if initErr != nil {
+			return parsedCommand{}, initErr
 		}
 
 		parsed.runner = runner
@@ -415,6 +428,14 @@ func parseListCommand(values []string) (listCommand, error) {
 	return command, nil
 }
 
+func parseNoValueCommand(values []string) (initCommand, error) {
+	if len(values) == 0 {
+		return initCommand{}, nil
+	}
+
+	return initCommand{}, fmt.Errorf("cannot assign value %q", values[0])
+}
+
 func parseSingleTodoCommand(name string, values []string) (viewCommand, error) {
 	if len(values) == 0 {
 		return viewCommand{}, fmt.Errorf("%s requires a todo id", name)
@@ -552,6 +573,35 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 	_, err = fmt.Fprintf(app.Stdout, "%s\n", value.ID)
 
 	return err
+}
+
+func (c initCommand) Execute(app *App, options runOptions) error {
+	result, err := todolist.InitDirectory(options.TodoDir)
+	if err != nil {
+		return err
+	}
+
+	if result.DirectoryCreated {
+		if _, err := fmt.Fprintf(app.Stdout, "initialized todo directory: %s\n", result.Directory); err != nil {
+			return err
+		}
+	} else {
+		if _, err := fmt.Fprintf(app.Stdout, "todo directory already exists: %s\n", result.Directory); err != nil {
+			return err
+		}
+	}
+
+	if result.ConfigCreated {
+		if _, err := fmt.Fprintf(app.Stdout, "created config file: %s\n", result.ConfigPath); err != nil {
+			return err
+		}
+	} else {
+		if _, err := fmt.Fprintf(app.Stdout, "config file already exists: %s\n", result.ConfigPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c listCommand) Execute(app *App, options runOptions) error {
@@ -892,6 +942,7 @@ func rootHelp() string {
 		"",
 		"Commands:",
 		"  add <title> [<status>] [<priority>]",
+		"  init",
 		"  list [<status-filter>] [<priority-filter>]",
 		"  view <todo>",
 		"  update <todo> [<title>] [<status>] [<priority>]",
@@ -912,6 +963,12 @@ func commandHelp(command string) string {
 			"Usage:",
 			"  todolist add [global options] <title> [<status>] [<priority>]",
 			"  todolist add [global options] title=<title> [status=<status>] [priority=<priority>]",
+			"",
+		}, "\n")
+	case "init":
+		return strings.Join([]string{
+			"Usage:",
+			"  todolist init [global options]",
 			"",
 		}, "\n")
 	case "list":

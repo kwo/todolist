@@ -8,11 +8,64 @@ import (
 	"strings"
 )
 
-const configFileName = ".todos"
+const (
+	configFileName        = ".todos"
+	defaultConfigContents = "prefix=todo-\n"
+)
+
+// InitResult describes what InitDirectory changed.
+type InitResult struct {
+	Directory        string
+	ConfigPath       string
+	DirectoryCreated bool
+	ConfigCreated    bool
+}
 
 // Config contains per-directory todolist settings.
 type Config struct {
 	Prefix string
+}
+
+// InitDirectory creates the todo directory and default config file when missing.
+func InitDirectory(dir string) (InitResult, error) {
+	result := InitResult{
+		Directory:  dir,
+		ConfigPath: filepath.Join(dir, configFileName),
+	}
+
+	info, err := os.Stat(dir)
+	switch {
+	case err == nil:
+		if !info.IsDir() {
+			return InitResult{}, fmt.Errorf("todo directory %q is not a directory", dir)
+		}
+	case os.IsNotExist(err):
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			return InitResult{}, fmt.Errorf("create todo directory %q: %w", dir, err)
+		}
+
+		result.DirectoryCreated = true
+	default:
+		return InitResult{}, fmt.Errorf("stat todo directory %q: %w", dir, err)
+	}
+
+	info, err = os.Stat(result.ConfigPath)
+	switch {
+	case err == nil:
+		if !info.Mode().IsRegular() {
+			return InitResult{}, fmt.Errorf("todo config %q is not a regular file", result.ConfigPath)
+		}
+	case os.IsNotExist(err):
+		if err := os.WriteFile(result.ConfigPath, []byte(defaultConfigContents), 0o600); err != nil {
+			return InitResult{}, fmt.Errorf("write todo config %q: %w", result.ConfigPath, err)
+		}
+
+		result.ConfigCreated = true
+	default:
+		return InitResult{}, fmt.Errorf("stat todo config %q: %w", result.ConfigPath, err)
+	}
+
+	return result, nil
 }
 
 // LoadConfig reads the todo directory configuration, returning defaults when no config file exists.
