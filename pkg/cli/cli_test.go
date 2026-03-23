@@ -568,6 +568,29 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	}
 }
 
+func TestListExcludesDoneByDefault(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be excluded by default, got %q", output)
+	}
+}
+
 func TestListFiltersByStatus(t *testing.T) {
 	t.Helper()
 
@@ -653,6 +676,57 @@ func TestListFiltersByPriority(t *testing.T) {
 
 	if strings.Contains(output, "low priority") {
 		t.Fatalf("expected priority 5 todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListPriorityFilterStillExcludesDoneByDefault(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority one", "todo", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "done priority one", "done", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority five", "todo", "5"})
+
+	exitCode := app.Run([]string{"list", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "active priority one") {
+		t.Fatalf("expected active priority 1 todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "done priority one") {
+		t.Fatalf("expected done priority 1 todo to be excluded by default, got %q", output)
+	}
+
+	if strings.Contains(output, "active priority five") {
+		t.Fatalf("expected priority 5 todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListPriorityFilterStillExcludesDoneByDefaultInJSON(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority one", "todo", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "done priority one", "done", "1"})
+
+	exitCode := app.Run([]string{"list", "--json", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(listed) != 1 || listed[0].Title != "active priority one" {
+		t.Fatalf("unexpected json list output: %+v", listed)
 	}
 }
 

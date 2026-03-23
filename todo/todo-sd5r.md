@@ -1,10 +1,10 @@
 ---
 id: todo-sd5r
 title: 'User Story: list defaults to done! status filter'
-status: todo
+status: done
 priority: 3
 createdAt: "2026-03-23T18:59:19Z"
-lastModified: "2026-03-23T18:59:19Z"
+lastModified: "2026-03-23T19:11:06Z"
 ---
 
 # User Story: list defaults to `done!` status filter

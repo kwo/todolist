@@ -431,6 +431,11 @@ func parseListCommand(values []string) (listCommand, error) {
 		return listCommand{}, fmt.Errorf("cannot assign value %q", raw)
 	}
 
+	if !statusAssigned {
+		command.StatusFilter = "done"
+		command.ExcludeStatus = true
+	}
+
 	return command, nil
 }
 
