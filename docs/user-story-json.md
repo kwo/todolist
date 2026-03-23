@@ -52,6 +52,37 @@ Supported commands:
 - global `--json` option
 - JSON output for core commands
 
+## JSON shape
+
+Todo objects are encoded as JSON objects with these fields. The `description` field is omitted when it is empty:
+
+```json
+{
+  "id": "todo-7k9m",
+  "title": "Buy groceries",
+  "status": "todo",
+  "priority": 2,
+  "createdAt": "2026-03-18T10:00:00Z",
+  "lastModified": "2026-03-18T10:00:00Z",
+  "description": "Need milk, eggs, and bread.\n"
+}
+```
+
+Command outputs:
+
+- `add` → the created todo object
+- `list` → an array of todo objects
+- `view` → the requested todo object
+- `update` → the updated todo object
+- `delete` → an object of the form:
+
+```json
+{
+  "id": "todo-7k9m",
+  "deleted": true
+}
+```
+
 ## Open issues
 
-1. The exact JSON shape for each command should be specified before implementation.
+None currently.

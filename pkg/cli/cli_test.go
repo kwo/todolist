@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,21 @@ import (
 
 	"github.com/kwo/todolist/pkg/cli"
 )
+
+type jsonTodo struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Status       string `json:"status"`
+	Priority     int    `json:"priority"`
+	CreatedAt    string `json:"createdAt"`
+	LastModified string `json:"lastModified"`
+	Description  string `json:"description"`
+}
+
+type jsonDeleteResult struct {
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
+}
 
 //nolint:maintidx // End-to-end CLI flow assertions are intentionally kept together.
 func TestAddListViewUpdateDeleteFlow(t *testing.T) {
@@ -125,6 +141,133 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 
 	if len(entries) != 0 {
 		t.Fatalf("expected todo dir to be empty, found %d entries", len(entries))
+	}
+}
+
+//nolint:maintidx // End-to-end JSON flow assertions are intentionally kept together.
+func TestJSONOutputForCoreCommands(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, true, "Need milk, eggs, and bread.\n")
+
+	exitCode := app.Run([]string{"add", "--json", "Buy groceries", "wip", "2"})
+	if exitCode != 0 {
+		t.Fatalf("expected json add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var added jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &added); err != nil {
+		t.Fatalf("unmarshal add json: %v; output=%q", err, stdout.String())
+	}
+
+	if added.ID == "" {
+		t.Fatal("expected add json to include an id")
+	}
+
+	if added.Title != "Buy groceries" || added.Status != "wip" || added.Priority != 2 {
+		t.Fatalf("unexpected add json: %+v", added)
+	}
+
+	if added.Description != "Need milk, eggs, and bread.\n" {
+		t.Fatalf("expected add description in json, got %q", added.Description)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	app.StdinProvided = false
+	app.Stdin = strings.NewReader("")
+
+	exitCode = app.Run([]string{"list", "--json"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(listed) != 1 || listed[0].ID != added.ID {
+		t.Fatalf("unexpected list json: %+v", listed)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", added.ID})
+	if exitCode != 0 {
+		t.Fatalf("expected json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var viewed jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &viewed); err != nil {
+		t.Fatalf("unmarshal view json: %v; output=%q", err, stdout.String())
+	}
+
+	if viewed != added {
+		t.Fatalf("expected view json to match add json, got %+v want %+v", viewed, added)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	app.StdinProvided = true
+	app.Stdin = strings.NewReader("Need milk, eggs, bread, and chips.\n")
+
+	exitCode = app.Run([]string{"update", "--json", added.ID, "Buy groceries and snacks", "done", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected json update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var updated jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &updated); err != nil {
+		t.Fatalf("unmarshal update json: %v; output=%q", err, stdout.String())
+	}
+
+	if updated.ID != added.ID || updated.Title != "Buy groceries and snacks" || updated.Status != "done" || updated.Priority != 1 {
+		t.Fatalf("unexpected update json: %+v", updated)
+	}
+
+	if updated.Description != "Need milk, eggs, bread, and chips.\n" {
+		t.Fatalf("expected updated description in json, got %q", updated.Description)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	app.StdinProvided = false
+	app.Stdin = strings.NewReader("")
+
+	exitCode = app.Run([]string{"delete", "--json", added.ID})
+	if exitCode != 0 {
+		t.Fatalf("expected json delete to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var deleted jsonDeleteResult
+	if err := json.Unmarshal(stdout.Bytes(), &deleted); err != nil {
+		t.Fatalf("unmarshal delete json: %v; output=%q", err, stdout.String())
+	}
+
+	if deleted.ID != added.ID || !deleted.Deleted {
+		t.Fatalf("unexpected delete json: %+v", deleted)
+	}
+}
+
+func TestJSONOmitsEmptyDescription(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"add", "--json", "Buy groceries"})
+	if exitCode != 0 {
+		t.Fatalf("expected json add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var added map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &added); err != nil {
+		t.Fatalf("unmarshal add json: %v; output=%q", err, stdout.String())
+	}
+
+	if _, ok := added["description"]; ok {
+		t.Fatalf("expected empty description to be omitted, got %+v", added)
 	}
 }
 

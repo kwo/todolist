@@ -15,10 +15,10 @@ const (
 
 // InitResult describes what InitDirectory changed.
 type InitResult struct {
-	Directory        string
-	ConfigPath       string
-	DirectoryCreated bool
-	ConfigCreated    bool
+	Directory        string `json:"directory"`
+	ConfigPath       string `json:"configPath"`
+	DirectoryCreated bool   `json:"directoryCreated"`
+	ConfigCreated    bool   `json:"configCreated"`
 }
 
 // Config contains per-directory todolist settings.

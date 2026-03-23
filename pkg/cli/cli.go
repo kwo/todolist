@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -82,6 +83,11 @@ type updateCommand struct {
 
 type viewCommand struct {
 	Todo string
+}
+
+type deleteResult struct {
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
 }
 
 // NewApp returns a new CLI application configured with the provided IO streams.
@@ -570,6 +576,10 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
+	if options.JSON {
+		return writeJSON(app.Stdout, value)
+	}
+
 	_, err = fmt.Fprintf(app.Stdout, "%s\n", value.ID)
 
 	return err
@@ -579,6 +589,10 @@ func (c initCommand) Execute(app *App, options runOptions) error {
 	result, err := todolist.InitDirectory(options.TodoDir)
 	if err != nil {
 		return err
+	}
+
+	if options.JSON {
+		return writeJSON(app.Stdout, result)
 	}
 
 	if result.DirectoryCreated {
@@ -615,6 +629,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
+	filtered := make([]todolist.Todo, 0, len(todos))
 	for _, value := range todos {
 		if c.StatusFilter != "" {
 			matchesStatus := value.Status == c.StatusFilter
@@ -627,6 +642,14 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 			continue
 		}
 
+		filtered = append(filtered, value)
+	}
+
+	if options.JSON {
+		return writeJSON(app.Stdout, filtered)
+	}
+
+	for _, value := range filtered {
 		if _, err = fmt.Fprintf(app.Stdout, "%s\t%s\n", value.ID, value.Title); err != nil {
 			return err
 		}
@@ -636,7 +659,17 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 }
 
 func (c viewCommand) Execute(app *App, options runOptions) error {
-	raw, err := todolist.NewStore(options.TodoDir).GetRaw(c.Todo)
+	store := todolist.NewStore(options.TodoDir)
+	if options.JSON {
+		value, err := store.Get(c.Todo)
+		if err != nil {
+			return err
+		}
+
+		return writeJSON(app.Stdout, value)
+	}
+
+	raw, err := store.GetRaw(c.Todo)
 	if err != nil {
 		return err
 	}
@@ -683,17 +716,41 @@ func (c updateCommand) Execute(app *App, options runOptions) error {
 
 	value.LastModified = todolist.NormalizeTimestamp(app.Now())
 
-	return store.Update(value)
+	if err := store.Update(value); err != nil {
+		return err
+	}
+
+	if options.JSON {
+		return writeJSON(app.Stdout, value)
+	}
+
+	return nil
 }
 
 func (c deleteCommand) Execute(app *App, options runOptions) error {
-	return todolist.NewStore(options.TodoDir).Delete(c.Todo)
+	store := todolist.NewStore(options.TodoDir)
+	if err := store.Delete(c.Todo); err != nil {
+		return err
+	}
+
+	if options.JSON {
+		return writeJSON(app.Stdout, deleteResult{ID: c.Todo, Deleted: true})
+	}
+
+	return nil
 }
 
 func readDescription(reader io.Reader, provided bool) (string, error) {
 	value, _, err := readOptionalDescription(reader, provided)
 
 	return value, err
+}
+
+func writeJSON(writer io.Writer, value any) error {
+	encoder := json.NewEncoder(writer)
+	encoder.SetEscapeHTML(false)
+
+	return encoder.Encode(value)
 }
 
 func parseStatusFilter(raw string) (string, bool, error) {

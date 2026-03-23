@@ -17,19 +17,19 @@ const (
 // Todo is a single todo stored as a Markdown file with YAML front matter.
 type Todo struct {
 	// ID is the stable todo identifier and filename prefix.
-	ID string
+	ID string `json:"id"`
 	// Title is the human-readable todo title.
-	Title string
+	Title string `json:"title"`
 	// Status is the workflow state of the todo.
-	Status string
+	Status string `json:"status"`
 	// Priority is the todo priority where 1 is highest and 5 is lowest.
-	Priority int
+	Priority int `json:"priority"`
 	// CreatedAt is the todo creation timestamp in UTC.
-	CreatedAt time.Time
+	CreatedAt time.Time `json:"createdAt"`
 	// LastModified is the timestamp of the most recent successful update in UTC.
-	LastModified time.Time
+	LastModified time.Time `json:"lastModified"`
 	// Description is the raw Markdown description stored below the front matter.
-	Description string
+	Description string `json:"description,omitempty"`
 }
 
 // NormalizeTimestamp converts a timestamp to UTC and truncates it to whole-second precision.
