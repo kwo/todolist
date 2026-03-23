@@ -1,10 +1,10 @@
 ---
 id: todo-m9yf
 title: 'User Story: split cli.go into command-specific files'
-status: todo
+status: done
 priority: 4
 createdAt: "2026-03-23T19:13:37Z"
-lastModified: "2026-03-23T19:16:27Z"
+lastModified: "2026-03-23T19:20:24Z"
 ---
 
 # User Story: split `cli.go` into command-specific files
