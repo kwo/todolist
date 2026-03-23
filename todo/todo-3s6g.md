@@ -1,3 +1,11 @@
+---
+id: todo-3s6g
+title: 'User Story: todo filtering'
+status: done
+createdAt: "2026-03-23T18:50:56Z"
+lastModified: "2026-03-23T18:50:56Z"
+---
+
 # User Story: todo filtering
 
 Add filtering to todo listing.

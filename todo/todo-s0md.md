@@ -1,3 +1,11 @@
+---
+id: todo-s0md
+title: 'User Story: `init` command'
+status: done
+createdAt: "2026-03-23T18:50:57Z"
+lastModified: "2026-03-23T18:50:57Z"
+---
+
 # User Story: `init` command
 
 Add an `init` command to bootstrap a todolist directory for a user.

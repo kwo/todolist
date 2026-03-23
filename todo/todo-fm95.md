@@ -1,3 +1,11 @@
+---
+id: todo-fm95
+title: Planning
+status: done
+createdAt: "2026-03-23T18:50:56Z"
+lastModified: "2026-03-23T18:50:56Z"
+---
+
 # Planning
 
 This project is split into planning and user story documents. These are not all strict sequential phases, and some user stories are independent of each other.

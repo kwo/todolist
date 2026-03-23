@@ -1,3 +1,11 @@
+---
+id: todo-2yh4
+title: 'User Story: machine-readable JSON output'
+status: done
+createdAt: "2026-03-23T18:50:57Z"
+lastModified: "2026-03-23T18:50:57Z"
+---
+
 # User Story: machine-readable JSON output
 
 Add machine-readable JSON output to todolist.

@@ -1,3 +1,12 @@
+---
+id: todo-ds14
+title: 'User Story: parent-child todo grouping'
+status: todo
+priority: 1
+createdAt: "2026-03-23T18:50:57Z"
+lastModified: "2026-03-23T18:50:57Z"
+---
+
 # User Story: parent-child todo grouping
 
 Add parent-child todo grouping to todolist.

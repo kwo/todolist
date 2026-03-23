@@ -1,3 +1,12 @@
+---
+id: todo-ed12
+title: 'User Story: todo dependencies'
+status: todo
+priority: 2
+createdAt: "2026-03-23T18:50:57Z"
+lastModified: "2026-03-23T18:50:57Z"
+---
+
 # User Story: todo dependencies
 
 Add dependency management and dependency inspection to todolist.

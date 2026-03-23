@@ -1,3 +1,11 @@
+---
+id: todo-cmev
+title: 'User Story: internal CLI parsing and inferred command values'
+status: done
+createdAt: "2026-03-23T18:50:56Z"
+lastModified: "2026-03-23T18:50:56Z"
+---
+
 # User Story: internal CLI parsing and inferred command values
 
 Add an internal command parser to todolist and remove the external `github.com/jessevdk/go-flags` dependency.

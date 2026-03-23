@@ -1,3 +1,11 @@
+---
+id: todo-6ekx
+title: 'User Story: todo metadata'
+status: done
+createdAt: "2026-03-23T18:50:56Z"
+lastModified: "2026-03-23T18:50:56Z"
+---
+
 # User Story: todo metadata
 
 Add todo metadata fields beyond the MVP core fields.

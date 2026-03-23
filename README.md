@@ -14,7 +14,14 @@ Each todo is a plain text file in a directory, making todos easy to inspect, edi
 
 ## Planning
 
-Planning documents and user stories are collected in [docs/planning.md](docs/planning.md).
+Planning documents, user stories, and supporting specifications are stored in the repository todo directory as todos.
+
+Use the CLI to inspect them:
+
+```bash
+todolist list
+todolist view <todo-id>
+```
 
 ## Shared Specifications
 
@@ -55,8 +62,6 @@ The CLI should:
 9. retry with incrementing nonce values on collision
 
 This gives `32^4 = 1,048,576` possible visible IDs.
-
-See `docs/id-generation.md` for the full spec and Go reference implementation.
 
 ### Status Values
 

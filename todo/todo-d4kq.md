@@ -1,3 +1,11 @@
+---
+id: todo-d4kq
+title: 'MVP: Basic todo management'
+status: done
+createdAt: "2026-03-23T18:50:56Z"
+lastModified: "2026-03-23T18:50:56Z"
+---
+
 # MVP: Basic todo management
 
 The MVP focuses on the smallest useful version of Todo List: basic todo CRUD backed by Markdown files.
