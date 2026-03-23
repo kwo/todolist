@@ -17,7 +17,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, true, "Need milk, eggs, and bread.\n")
 
-	exitCode := app.Run([]string{"add", "-s", "wip", "-p", "2", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "Buy groceries", "wip", "2"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -72,7 +72,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 	app.StdinProvided = true
 	app.Stdin = strings.NewReader("Need milk, eggs, bread, and chips.\n")
 
-	exitCode = app.Run([]string{"update", id, "--title", "Buy groceries and snacks", "-s", "done", "-p", "1"})
+	exitCode = app.Run([]string{"update", id, "Buy groceries and snacks", "done", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected update to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -157,12 +157,12 @@ func TestAddDefaultsStatusAndPriority(t *testing.T) {
 	}
 }
 
-func TestAddPriorityZeroUsesDefault(t *testing.T) {
+func TestAddAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "--priority", "0", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "title=done"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -177,17 +177,50 @@ func TestAddPriorityZeroUsesDefault(t *testing.T) {
 	}
 
 	viewed := stdout.String()
+	if !strings.Contains(viewed, "title: done") {
+		t.Fatalf("expected literal title in view output, got %q", viewed)
+	}
+
+	if !strings.Contains(viewed, "status: todo") {
+		t.Fatalf("expected default status in view output, got %q", viewed)
+	}
+}
+
+func TestAddAllowsLiteralPriorityLikeTitleWithExplicitAssignment(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"add", "title=2"})
+	if exitCode != 0 {
+		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	id := strings.TrimSpace(stdout.String())
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", id})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	viewed := stdout.String()
+	if !strings.Contains(viewed, "title: \"2\"") {
+		t.Fatalf("expected literal title in view output, got %q", viewed)
+	}
+
 	if !strings.Contains(viewed, "priority: 5") {
 		t.Fatalf("expected default priority in view output, got %q", viewed)
 	}
 }
 
-func TestAddRejectsInvalidStatus(t *testing.T) {
+func TestAddRejectsInvalidExplicitStatus(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "--status", "active", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "status=active", "Buy groceries"})
 	if exitCode != 1 {
 		t.Fatalf("expected add to fail, got %d", exitCode)
 	}
@@ -201,21 +234,57 @@ func TestAddRejectsInvalidStatus(t *testing.T) {
 	}
 }
 
-func TestUpdateRejectsInvalidPriority(t *testing.T) {
+func TestAddRejectsUnassignableExtraValue(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "Buy groceries"})
-	if exitCode != 0 {
-		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	exitCode := app.Run([]string{"add", "Buy groceries", "snacks"})
+	if exitCode != 1 {
+		t.Fatalf("expected add to fail, got %d", exitCode)
 	}
 
-	id := strings.TrimSpace(stdout.String())
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout, got %q", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), `cannot assign value "snacks"`) {
+		t.Fatalf("expected assignment error, got %q", stderr.String())
+	}
+}
+
+func TestUpdateAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
+
+	exitCode := app.Run([]string{"update", id, "title=done"})
+	if exitCode != 0 {
+		t.Fatalf("expected update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
 	stdout.Reset()
 	stderr.Reset()
 
-	exitCode = app.Run([]string{"update", id, "--priority", "6"})
+	exitCode = app.Run([]string{"view", id})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	viewed := stdout.String()
+	if !strings.Contains(viewed, "title: done") {
+		t.Fatalf("expected updated literal title, got %q", viewed)
+	}
+}
+
+func TestUpdateRejectsInvalidExplicitPriority(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
+
+	exitCode := app.Run([]string{"update", id, "priority=6"})
 	if exitCode != 1 {
 		t.Fatalf("expected update to fail, got %d", exitCode)
 	}
@@ -229,49 +298,13 @@ func TestUpdateRejectsInvalidPriority(t *testing.T) {
 	}
 }
 
-func TestUpdatePriorityZeroCountsAsOmitted(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	exitCode := app.Run([]string{"add", "Buy groceries"})
-	if exitCode != 0 {
-		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	id := strings.TrimSpace(stdout.String())
-	stdout.Reset()
-	stderr.Reset()
-
-	exitCode = app.Run([]string{"update", id, "--priority", "0"})
-	if exitCode != 1 {
-		t.Fatalf("expected update without effective changes to fail, got %d", exitCode)
-	}
-
-	if stdout.Len() != 0 {
-		t.Fatalf("expected no stdout, got %q", stdout.String())
-	}
-
-	if !strings.Contains(stderr.String(), "update requires --title, --status, --priority, or stdin description input") {
-		t.Fatalf("expected update error, got %q", stderr.String())
-	}
-}
-
 func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
 
-	exitCode := app.Run([]string{"add", "Buy groceries"})
-	if exitCode != 0 {
-		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	id := strings.TrimSpace(stdout.String())
-	stdout.Reset()
-	stderr.Reset()
-
-	exitCode = app.Run([]string{"update", id})
+	exitCode := app.Run([]string{"update", id})
 	if exitCode != 1 {
 		t.Fatalf("expected update without changes to fail, got %d", exitCode)
 	}
@@ -280,7 +313,7 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), "update requires --title, --status, --priority, or stdin description input") {
+	if !strings.Contains(stderr.String(), "update requires a title, status, priority, or stdin description input") {
 		t.Fatalf("expected update error, got %q", stderr.String())
 	}
 }
@@ -309,10 +342,10 @@ func TestListFiltersByStatus(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first todo"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
 
-	exitCode := app.Run([]string{"list", "-s", "done"})
+	exitCode := app.Run([]string{"list", "done"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -332,10 +365,10 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "todo", "first todo"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-s", "done", "second todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
 
-	exitCode := app.Run([]string{"list", "-s", "!done"})
+	exitCode := app.Run([]string{"list", "!done"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -350,34 +383,15 @@ func TestListExcludesStatusWithBangPrefix(t *testing.T) {
 	}
 }
 
-func TestListRejectsInvalidStatusFilter(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	exitCode := app.Run([]string{"list", "-s", "!"})
-	if exitCode != 1 {
-		t.Fatalf("expected list to fail, got %d", exitCode)
-	}
-
-	if stdout.Len() != 0 {
-		t.Fatalf("expected no stdout, got %q", stdout.String())
-	}
-
-	if !strings.Contains(stderr.String(), `invalid status "": must be one of todo, wip, done`) {
-		t.Fatalf("expected invalid status error, got %q", stderr.String())
-	}
-}
-
 func TestListFiltersByPriority(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "low priority"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "high priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "low priority", "5"})
 
-	exitCode := app.Run([]string{"list", "-p", "1"})
+	exitCode := app.Run([]string{"list", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -392,80 +406,15 @@ func TestListFiltersByPriority(t *testing.T) {
 	}
 }
 
-func TestListExcludesPriorityWithDotPrefix(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "high priority"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "3", "medium priority"})
-
-	exitCode := app.Run([]string{"list", "-p", ".3"})
-	if exitCode != 0 {
-		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "high priority") {
-		t.Fatalf("expected priority 1 todo to be included, got %q", output)
-	}
-
-	if strings.Contains(output, "medium priority") {
-		t.Fatalf("expected priority 3 todo to be excluded, got %q", output)
-	}
-}
-
-func TestListFiltersPriorityGreaterThan(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
-
-	exitCode := app.Run([]string{"list", "-p", "+3"})
-	if exitCode != 0 {
-		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	output := stdout.String()
-	if strings.Contains(output, "priority two") {
-		t.Fatalf("expected priority 2 todo to be filtered out, got %q", output)
-	}
-
-	if !strings.Contains(output, "priority four") {
-		t.Fatalf("expected priority 4 todo to be included, got %q", output)
-	}
-}
-
-func TestListFiltersPriorityGreaterThanZero(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "1", "priority one"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "5", "priority five"})
-
-	exitCode := app.Run([]string{"list", "-p", "+0"})
-	if exitCode != 0 {
-		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "priority one") || !strings.Contains(output, "priority five") {
-		t.Fatalf("expected +0 to include all todos with valid priorities, got %q", output)
-	}
-}
-
 func TestListFiltersPriorityLessThan(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "2", "priority two"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "-p", "4", "priority four"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority two", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority four", "4"})
 
-	exitCode := app.Run([]string{"list", "--priority=-3"})
+	exitCode := app.Run([]string{"list", "-3"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -480,12 +429,40 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 	}
 }
 
+func TestListSupportsExplicitFilters(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "done", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "third todo", "todo", "4"})
+
+	exitCode := app.Run([]string{"list", "status=done", "priority=+3"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be filtered out, got %q", output)
+	}
+
+	if !strings.Contains(output, "second todo") {
+		t.Fatalf("expected matching todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "third todo") {
+		t.Fatalf("expected non-matching status todo to be filtered out, got %q", output)
+	}
+}
+
 func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"list", "-p", "."})
+	exitCode := app.Run([]string{"list", "."})
 	if exitCode != 1 {
 		t.Fatalf("expected list to fail, got %d", exitCode)
 	}
@@ -499,24 +476,121 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 	}
 }
 
-func TestMissingTodoDirectoryFails(t *testing.T) {
+func TestDirectoryOptionIsParsedAfterCommand(t *testing.T) {
 	t.Helper()
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
-	app.TodoDir = filepath.Join(t.TempDir(), "missing")
+	app.TodoDir = filepath.Join(t.TempDir(), "default-missing")
+	app.LookupEnv = func(string) (string, bool) {
+		return "", false
+	}
 	app.Now = func() time.Time {
 		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
 	}
 
-	exitCode := app.Run([]string{"list"})
-	if exitCode != 1 {
-		t.Fatalf("expected list to fail, got %d", exitCode)
+	otherDir := filepath.Join(t.TempDir(), "other")
+	if err := os.Mkdir(otherDir, 0o750); err != nil {
+		t.Fatalf("create other todo dir: %v", err)
 	}
 
-	if !strings.Contains(stderr.String(), "todo directory") {
-		t.Fatalf("expected missing directory error, got %q", stderr.String())
+	exitCode := app.Run([]string{"add", "-d", otherDir, "Buy groceries"})
+	if exitCode != 0 {
+		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	id := strings.TrimSpace(stdout.String())
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "-d", otherDir, id})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "title: Buy groceries") {
+		t.Fatalf("expected view output from alternate directory, got %q", stdout.String())
+	}
+}
+
+func TestDirectoryEnvironmentVariableIsUsed(t *testing.T) {
+	t.Helper()
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
+	app.TodoDir = filepath.Join(t.TempDir(), "default-missing")
+	envDir := filepath.Join(t.TempDir(), "env-todo")
+	app.LookupEnv = func(key string) (string, bool) {
+		if key != "TODOLIST_DIRECTORY" {
+			return "", false
+		}
+
+		return envDir, true
+	}
+	app.Now = func() time.Time {
+		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
+	}
+
+	if err := os.Mkdir(envDir, 0o750); err != nil {
+		t.Fatalf("create env todo dir: %v", err)
+	}
+
+	exitCode := app.Run([]string{"add", "Buy groceries"})
+	if exitCode != 0 {
+		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	id := strings.TrimSpace(stdout.String())
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", id})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "title: Buy groceries") {
+		t.Fatalf("expected view output from env directory, got %q", stdout.String())
+	}
+}
+
+func TestAddHelpPrintsCommandUsage(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"add", "--help"})
+	if exitCode != 0 {
+		t.Fatalf("expected help to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr, got %q", stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "todolist add") {
+		t.Fatalf("expected add usage, got %q", stdout.String())
+	}
+}
+
+func TestUnknownCommandFails(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"nope"})
+	if exitCode != 1 {
+		t.Fatalf("expected unknown command to fail, got %d", exitCode)
+	}
+
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout, got %q", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), `unknown command "nope"`) {
+		t.Fatalf("expected unknown command error, got %q", stderr.String())
 	}
 }
 
@@ -547,6 +621,9 @@ func newTestApp(t *testing.T, stdinProvided bool, stdin string) (*cli.App, *byte
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(stdin), stdout, stderr, stdinProvided)
 	app.TodoDir = filepath.Join(t.TempDir(), "todo")
+	app.LookupEnv = func(string) (string, bool) {
+		return "", false
+	}
 	app.Now = func() time.Time {
 		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
 	}
