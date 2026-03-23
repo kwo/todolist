@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	alphabet  = "0123456789abcdefghjkmnpqrstvwxyz"
-	prefix    = "todo-"
-	visibleID = 4
+	alphabet        = "0123456789abcdefghjkmnpqrstvwxyz"
+	DefaultIDPrefix = "todo-"
+	visibleID       = 4
 )
 
 // ExistsFunc reports whether a generated todo ID already exists.
@@ -17,6 +17,11 @@ type ExistsFunc func(string) bool
 
 // GenerateID returns a unique todo ID for todo, retrying with incrementing nonce values on collision.
 func GenerateID(todo Todo, exists ExistsFunc) string {
+	return GenerateIDWithPrefix(todo, DefaultIDPrefix, exists)
+}
+
+// GenerateIDWithPrefix returns a unique todo ID for todo using prefix, retrying on collision.
+func GenerateIDWithPrefix(todo Todo, prefix string, exists ExistsFunc) string {
 	for nonce := 0; ; nonce++ {
 		id := prefix + suffix(buildSeed(todo, nonce))
 		if !exists(id) {

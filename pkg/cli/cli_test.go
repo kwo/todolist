@@ -157,6 +157,25 @@ func TestAddDefaultsStatusAndPriority(t *testing.T) {
 	}
 }
 
+func TestAddUsesConfiguredPrefixFromTodoDirectory(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	if err := os.WriteFile(filepath.Join(app.TodoDir, ".todos"), []byte("prefix=work-\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	exitCode := app.Run([]string{"add", "Buy groceries"})
+	if exitCode != 0 {
+		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	id := strings.TrimSpace(stdout.String())
+	if !strings.HasPrefix(id, "work-") {
+		t.Fatalf("expected configured prefix, got %q", id)
+	}
+}
+
 func TestAddAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
 	t.Helper()
 

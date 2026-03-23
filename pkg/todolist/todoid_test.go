@@ -83,3 +83,25 @@ func TestGenerateIDRetriesOnCollision(t *testing.T) {
 		t.Fatal("expected generated id")
 	}
 }
+
+func TestGenerateIDWithPrefixUsesConfiguredPrefix(t *testing.T) {
+	t.Helper()
+
+	value := todolist.Todo{
+		Title:       "Buy groceries",
+		Description: "Need milk",
+		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
+	}
+	exists := func(string) bool { return false }
+
+	generatedID := todolist.GenerateIDWithPrefix(value, "work-", exists)
+
+	matched, err := regexp.MatchString(`^work-[0-9a-z]{4}$`, generatedID)
+	if err != nil {
+		t.Fatalf("match id format: %v", err)
+	}
+
+	if !matched {
+		t.Fatalf("expected id to match work-xxxx format, got %q", generatedID)
+	}
+}

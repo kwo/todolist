@@ -530,6 +530,11 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 
 	now := todolist.NormalizeTimestamp(app.Now())
 	store := todolist.NewStore(options.TodoDir)
+	config, err := todolist.LoadConfig(options.TodoDir)
+	if err != nil {
+		return err
+	}
+
 	value := todolist.Todo{
 		Title:        title,
 		Status:       c.Status,
@@ -538,7 +543,7 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		LastModified: now,
 		Description:  description,
 	}
-	value.ID = todolist.GenerateID(value, store.Exists)
+	value.ID = todolist.GenerateIDWithPrefix(value, config.Prefix, store.Exists)
 
 	if err := store.Create(value); err != nil {
 		return err

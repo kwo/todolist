@@ -47,6 +47,14 @@ Then:
 
 - the default prefix `todo-` is used
 
+Given:
+
+- the `.todos` file contains a malformed line or unsupported key
+
+Then:
+
+- todolist returns an error instead of silently ignoring the invalid configuration
+
 ## Scope
 
 - `.todos` file support
@@ -58,6 +66,9 @@ Then:
 - naturally paired with [User Story: todo directory selection](user-story-directory-selection.md)
 - complemented by [User Story: `init` command](user-story-init.md)
 
-## Open issues
+## Configuration parsing notes
 
-1. The behavior for malformed `.todos` files should be specified explicitly.
+- blank lines are ignored
+- each non-empty line must use `key=value` format
+- unsupported keys are rejected as errors
+- an empty `prefix` value falls back to the default prefix `todo-`
