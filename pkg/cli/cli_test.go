@@ -1171,6 +1171,49 @@ func TestAddHelpPrintsCommandUsage(t *testing.T) {
 	}
 }
 
+func TestUsagePrintsEmbeddedUsageText(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"usage"})
+	if exitCode != 0 {
+		t.Fatalf("expected usage to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr, got %q", stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "## Using the todolist app") {
+		t.Fatalf("expected usage heading, got %q", output)
+	}
+
+	if !strings.Contains(output, "todolist list --json") {
+		t.Fatalf("expected usage content, got %q", output)
+	}
+}
+
+func TestUsageHelpPrintsCommandUsage(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"usage", "--help"})
+	if exitCode != 0 {
+		t.Fatalf("expected usage help to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if stderr.Len() != 0 {
+		t.Fatalf("expected no stderr, got %q", stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "todolist usage") {
+		t.Fatalf("expected usage command help, got %q", stdout.String())
+	}
+}
+
 func TestUnknownCommandFails(t *testing.T) {
 	t.Helper()
 
@@ -1217,6 +1260,12 @@ func newTestApp(t *testing.T, stdinProvided bool, stdin string) (*cli.App, *byte
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(stdin), stdout, stderr, stdinProvided)
 	app.TodoDir = filepath.Join(t.TempDir(), "todo")
+	app.UsageText = strings.Join([]string{
+		"## Using the todolist app",
+		"",
+		"Use `todolist list --json` for structured output.",
+		"",
+	}, "\n")
 	app.LookupEnv = func(string) (string, bool) {
 		return "", false
 	}

@@ -24,6 +24,8 @@ type App struct {
 	Now func() time.Time
 	// LookupEnv resolves environment variables and is injectable for tests.
 	LookupEnv func(string) (string, bool)
+	// UsageText is the embedded usage documentation printed by the usage command.
+	UsageText string
 }
 
 type globalOptions struct {

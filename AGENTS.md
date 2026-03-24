@@ -17,3 +17,9 @@ git commit -m "..."
 
 - After adding and using a new dependency, always run `go mod tidy`
 - Always run `golangci-lint run --fix` before committing and fix any remaining issues
+
+## Using the todolist app
+
+For instructions on how to use the app to manage todo items, read `USAGE.md`.
+
+Prefer `todolist ... --json` when an agent needs structured output.

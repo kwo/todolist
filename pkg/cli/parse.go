@@ -8,6 +8,7 @@ import (
 	"github.com/kwo/todolist/pkg/todolist"
 )
 
+//nolint:maintidx // Command dispatch is intentionally centralized in one parser.
 func parseArgs(args []string, app *App) (parsedCommand, error) {
 	if len(args) == 0 {
 		return parsedCommand{}, fmt.Errorf("missing command")
@@ -96,6 +97,17 @@ func parseArgs(args []string, app *App) (parsedCommand, error) {
 		}
 
 		parsed.runner = deleteCommand(runner)
+	case "usage":
+		if parsed.help {
+			return parsed, nil
+		}
+
+		runner, usageErr := parseUsageCommand(commandValues)
+		if usageErr != nil {
+			return parsedCommand{}, usageErr
+		}
+
+		parsed.runner = runner
 	default:
 		return parsedCommand{}, fmt.Errorf("unknown command %q", commandName)
 	}
@@ -140,6 +152,14 @@ func parseNoValueCommand(values []string) (initCommand, error) {
 	}
 
 	return initCommand{}, fmt.Errorf("cannot assign value %q", values[0])
+}
+
+func parseUsageCommand(values []string) (usageCommand, error) {
+	if len(values) == 0 {
+		return usageCommand{}, nil
+	}
+
+	return usageCommand{}, fmt.Errorf("cannot assign value %q", values[0])
 }
 
 func parseSingleTodoCommand(name string, values []string) (viewCommand, error) {

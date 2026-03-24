@@ -8,6 +8,7 @@ import (
 
 func main() {
 	app := cli.NewApp(os.Stdin, os.Stdout, os.Stderr, stdinProvided())
+	app.UsageText = embeddedUsageText
 	os.Exit(app.Run(os.Args[1:]))
 }
 

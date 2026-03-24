@@ -28,6 +28,7 @@ func rootHelp() string {
 		"  view <todo>",
 		"  update <todo> [<title>] [<status>] [<priority>]",
 		"  delete <todo>",
+		"  usage",
 		"",
 		"Global options:",
 		"  -d, --directory <dir>  use a specific todo directory",
@@ -76,6 +77,12 @@ func commandHelp(command string) string {
 		return strings.Join([]string{
 			"Usage:",
 			"  todolist delete [global options] <todo>",
+			"",
+		}, "\n")
+	case "usage":
+		return strings.Join([]string{
+			"Usage:",
+			"  todolist usage [global options]",
 			"",
 		}, "\n")
 	default:
