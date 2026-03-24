@@ -19,18 +19,18 @@ func writeHelp(writer io.Writer, command string) {
 func rootHelp() string {
 	return strings.Join([]string{
 		"Usage:",
-		"  todolist <command> [global options] [command values...]",
+		"  todolist <command> [flags]",
 		"",
 		"Commands:",
-		"  add <title> [<status>] [<priority>]",
-		"  init",
-		"  list [<status-filter>] [<priority-filter>]",
-		"  view <todo>",
-		"  update <todo> [<title>] [<status>] [<priority>]",
-		"  delete <todo>",
-		"  usage",
+		"  add      add a new todo",
+		"  init     initialize a todo directory",
+		"  list     list todos",
+		"  view     view a todo",
+		"  update   update a todo",
+		"  delete   delete a todo",
+		"  usage    print usage documentation",
 		"",
-		"Global options:",
+		"Global flags:",
 		"  -d, --directory <dir>  use a specific todo directory",
 		"      --json             enable JSON output",
 		"  -h, --help             show help",
@@ -43,46 +43,64 @@ func commandHelp(command string) string {
 	case "add":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist add [global options] <title> [<status>] [<priority>]",
-			"  todolist add [global options] title=<title> [status=<status>] [priority=<priority>]",
+			"  todolist add [flags] [<title>]",
+			"",
+			"Flags:",
+			"  -t, --title <title>     todo title (required if no positional title)",
+			"  -s, --status <status>   todo status: todo|wip|done (default \"todo\")",
+			"  -p, --priority <n>      priority 1..5 (default 5)",
+			"",
+			"A single positional argument is accepted as the title.",
+			"Use --title when the title could be mistaken for another value.",
 			"",
 		}, "\n")
 	case "init":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist init [global options]",
+			"  todolist init [flags]",
 			"",
 		}, "\n")
 	case "list":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist list [global options] [<status-filter>] [<priority-filter>]",
-			"  todolist list [global options] [status=<status-filter>] [priority=<priority-filter>]",
+			"  todolist list [flags]",
+			"",
+			"Flags:",
+			"  -s, --status <filter>     status filter: todo|wip|done, append ! to exclude",
+			"  -p, --priority <filter>   priority filter: n, n!, n+, or n-",
+			"",
+			"By default, done todos are excluded.",
 			"",
 		}, "\n")
 	case "view":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist view [global options] <todo>",
+			"  todolist view [flags] <todo-id>",
 			"",
 		}, "\n")
 	case "update":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist update [global options] <todo> [<title>] [<status>] [<priority>]",
-			"  todolist update [global options] <todo> [title=<title>] [status=<status>] [priority=<priority>]",
+			"  todolist update [flags] <todo-id>",
+			"",
+			"Flags:",
+			"  -t, --title <title>     new title",
+			"  -s, --status <status>   new status: todo|wip|done",
+			"  -p, --priority <n>      new priority 1..5",
+			"",
+			"At least one of --title, --status, --priority, or stdin description is required.",
 			"",
 		}, "\n")
 	case "delete":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist delete [global options] <todo>",
+			"  todolist delete [flags] <todo-id>",
 			"",
 		}, "\n")
 	case "usage":
 		return strings.Join([]string{
 			"Usage:",
-			"  todolist usage [global options]",
+			"  todolist usage [flags]",
 			"",
 		}, "\n")
 	default:

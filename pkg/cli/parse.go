@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	flag "github.com/spf13/pflag"
+
 	"github.com/kwo/todolist/pkg/todolist"
 )
 
-//nolint:maintidx // Command dispatch is intentionally centralized in one parser.
 func parseArgs(args []string, app *App) (parsedCommand, error) {
 	if len(args) == 0 {
 		return parsedCommand{}, fmt.Errorf("missing command")
@@ -19,223 +20,354 @@ func parseArgs(args []string, app *App) (parsedCommand, error) {
 	}
 
 	commandName := args[0]
-	commandValues, globals, err := parseGlobalOptions(args[1:])
-	if err != nil {
+	commandArgs := args[1:]
+
+	switch commandName {
+	case "add":
+		return parseAddArgs(commandArgs, app)
+	case "init":
+		return parseNoArgCommand(commandName, commandArgs, app, initCommand{})
+	case "list":
+		return parseListArgs(commandArgs, app)
+	case "view":
+		return parseSingleIDCommand(commandName, commandArgs, app, func(id string) commandRunner { return viewCommand{Todo: id} })
+	case "update":
+		return parseUpdateArgs(commandArgs, app)
+	case "delete":
+		return parseSingleIDCommand(commandName, commandArgs, app, func(id string) commandRunner { return deleteCommand{Todo: id} })
+	case "usage":
+		return parseNoArgCommand(commandName, commandArgs, app, usageCommand{})
+	default:
+		return parsedCommand{}, fmt.Errorf("unknown command %q", commandName)
+	}
+}
+
+// newFlagSet creates a new pflag.FlagSet for a command with global flags registered.
+func newFlagSet(name string, globals *globalOptions) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.StringVarP(&globals.Directory, "directory", "d", "", "use a specific todo directory")
+	fs.BoolVar(&globals.JSON, "json", false, "enable JSON output")
+	fs.BoolVarP(&globals.Help, "help", "h", false, "show help")
+
+	return fs
+}
+
+func parseNoArgCommand(name string, args []string, app *App, runner commandRunner) (parsedCommand, error) {
+	var globals globalOptions
+
+	fs := newFlagSet(name, &globals)
+	if err := fs.Parse(args); err != nil {
 		return parsedCommand{}, err
 	}
 
 	parsed := parsedCommand{
-		name:    commandName,
+		name:    name,
 		help:    globals.Help,
 		globals: resolveRunOptions(app, globals),
 	}
 
-	switch commandName {
-	case "add":
-		if parsed.help {
-			return parsed, nil
+	if parsed.help {
+		return parsed, nil
+	}
+
+	if fs.NArg() > 0 {
+		return parsedCommand{}, fmt.Errorf("%s does not accept positional arguments, got %q", name, fs.Arg(0))
+	}
+
+	parsed.runner = runner
+
+	return parsed, nil
+}
+
+func parseSingleIDCommand(name string, args []string, app *App, makeRunner func(string) commandRunner) (parsedCommand, error) {
+	var globals globalOptions
+
+	fs := newFlagSet(name, &globals)
+	if err := fs.Parse(args); err != nil {
+		return parsedCommand{}, err
+	}
+
+	parsed := parsedCommand{
+		name:    name,
+		help:    globals.Help,
+		globals: resolveRunOptions(app, globals),
+	}
+
+	if parsed.help {
+		return parsed, nil
+	}
+
+	if fs.NArg() == 0 {
+		return parsedCommand{}, fmt.Errorf("%s requires a todo id", name)
+	}
+
+	if fs.NArg() > 1 {
+		return parsedCommand{}, fmt.Errorf("%s accepts only one positional argument, got extra %q", name, fs.Arg(1))
+	}
+
+	parsed.runner = makeRunner(fs.Arg(0))
+
+	return parsed, nil
+}
+
+func parseAddArgs(args []string, app *App) (parsedCommand, error) {
+	var globals globalOptions
+
+	var title string
+
+	var status string
+
+	var priority int
+
+	fs := newFlagSet("add", &globals)
+	fs.StringVarP(&title, "title", "t", "", "todo title (required)")
+	fs.StringVarP(&status, "status", "s", todolist.DefaultStatus, "todo status: todo|wip|done")
+	fs.IntVarP(&priority, "priority", "p", todolist.DefaultPriority, "priority 1..5")
+
+	if err := fs.Parse(args); err != nil {
+		return parsedCommand{}, err
+	}
+
+	parsed := parsedCommand{
+		name:    "add",
+		help:    globals.Help,
+		globals: resolveRunOptions(app, globals),
+	}
+
+	if parsed.help {
+		return parsed, nil
+	}
+
+	// Allow a single positional arg as the title when --title is not set.
+	if title == "" {
+		if fs.NArg() == 0 {
+			return parsedCommand{}, fmt.Errorf("add requires --title or a positional title argument")
 		}
 
-		runner, addErr := parseAddCommand(commandValues)
-		if addErr != nil {
-			return parsedCommand{}, addErr
+		if fs.NArg() > 1 {
+			return parsedCommand{}, fmt.Errorf("add accepts only one positional argument (title), got extra %q; use --status and --priority flags", fs.Arg(1))
 		}
 
-		parsed.runner = runner
-	case "init":
-		if parsed.help {
-			return parsed, nil
-		}
+		title = fs.Arg(0)
+	} else if fs.NArg() > 0 {
+		return parsedCommand{}, fmt.Errorf("cannot use both --title flag and positional title argument %q", fs.Arg(0))
+	}
 
-		runner, initErr := parseNoValueCommand(commandValues)
-		if initErr != nil {
-			return parsedCommand{}, initErr
-		}
+	if err := todolist.ValidateStatus(status); err != nil {
+		return parsedCommand{}, err
+	}
 
-		parsed.runner = runner
-	case "list":
-		if parsed.help {
-			return parsed, nil
-		}
+	if err := todolist.ValidatePriority(priority); err != nil {
+		return parsedCommand{}, err
+	}
 
-		runner, listErr := parseListCommand(commandValues)
-		if listErr != nil {
-			return parsedCommand{}, listErr
-		}
-
-		parsed.runner = runner
-	case "view":
-		if parsed.help {
-			return parsed, nil
-		}
-
-		runner, viewErr := parseSingleTodoCommand("view", commandValues)
-		if viewErr != nil {
-			return parsedCommand{}, viewErr
-		}
-
-		parsed.runner = runner
-	case "update":
-		if parsed.help {
-			return parsed, nil
-		}
-
-		runner, updateErr := parseUpdateCommand(commandValues)
-		if updateErr != nil {
-			return parsedCommand{}, updateErr
-		}
-
-		parsed.runner = runner
-	case "delete":
-		if parsed.help {
-			return parsed, nil
-		}
-
-		runner, deleteErr := parseSingleTodoCommand("delete", commandValues)
-		if deleteErr != nil {
-			return parsedCommand{}, deleteErr
-		}
-
-		parsed.runner = deleteCommand(runner)
-	case "usage":
-		if parsed.help {
-			return parsed, nil
-		}
-
-		runner, usageErr := parseUsageCommand(commandValues)
-		if usageErr != nil {
-			return parsedCommand{}, usageErr
-		}
-
-		parsed.runner = runner
-	default:
-		return parsedCommand{}, fmt.Errorf("unknown command %q", commandName)
+	parsed.runner = addCommand{
+		Title:    title,
+		Status:   status,
+		Priority: priority,
 	}
 
 	return parsed, nil
 }
 
-func parseGlobalOptions(args []string) ([]string, globalOptions, error) {
-	values := make([]string, 0, len(args))
-	options := globalOptions{}
+func parseUpdateArgs(args []string, app *App) (parsedCommand, error) {
+	var globals globalOptions
 
-	for index := 0; index < len(args); index++ {
-		arg := args[index]
+	var title string
 
-		switch {
-		case arg == "-h" || arg == "--help":
-			options.Help = true
-		case arg == "--json":
-			options.JSON = true
-		case arg == "-d" || arg == "--directory":
-			if index+1 >= len(args) {
-				return nil, globalOptions{}, fmt.Errorf("%s requires a directory value", arg)
-			}
+	var status string
 
-			index++
-			options.Directory = args[index]
-		case strings.HasPrefix(arg, "-d="):
-			options.Directory = strings.TrimPrefix(arg, "-d=")
-		case strings.HasPrefix(arg, "--directory="):
-			options.Directory = strings.TrimPrefix(arg, "--directory=")
-		default:
-			values = append(values, arg)
+	var priority int
+
+	fs := newFlagSet("update", &globals)
+	fs.StringVarP(&title, "title", "t", "", "new title")
+	fs.StringVarP(&status, "status", "s", "", "new status: todo|wip|done")
+	fs.IntVarP(&priority, "priority", "p", 0, "new priority 1..5")
+
+	if err := fs.Parse(args); err != nil {
+		return parsedCommand{}, err
+	}
+
+	parsed := parsedCommand{
+		name:    "update",
+		help:    globals.Help,
+		globals: resolveRunOptions(app, globals),
+	}
+
+	if parsed.help {
+		return parsed, nil
+	}
+
+	if fs.NArg() == 0 {
+		return parsedCommand{}, fmt.Errorf("update requires a todo id")
+	}
+
+	if fs.NArg() > 1 {
+		return parsedCommand{}, fmt.Errorf("update accepts only one positional argument (todo id), got extra %q; use --title, --status, --priority flags", fs.Arg(1))
+	}
+
+	cmd := updateCommand{Todo: fs.Arg(0)}
+
+	if fs.Changed("title") {
+		cmd.Title = title
+		cmd.TitleProvided = true
+	}
+
+	if fs.Changed("status") {
+		if err := todolist.ValidateStatus(status); err != nil {
+			return parsedCommand{}, err
 		}
+
+		cmd.Status = status
+		cmd.StatusProvided = true
 	}
 
-	return values, options, nil
+	if fs.Changed("priority") {
+		if err := todolist.ValidatePriority(priority); err != nil {
+			return parsedCommand{}, err
+		}
+
+		cmd.Priority = priority
+		cmd.PriorityProvided = true
+	}
+
+	parsed.runner = cmd
+
+	return parsed, nil
 }
 
-func parseNoValueCommand(values []string) (initCommand, error) {
-	if len(values) == 0 {
-		return initCommand{}, nil
+func parseListArgs(args []string, app *App) (parsedCommand, error) {
+	var globals globalOptions
+
+	var status string
+
+	var priority string
+
+	fs := newFlagSet("list", &globals)
+	fs.StringVarP(&status, "status", "s", "", "status filter: todo|wip|done, append ! to exclude")
+	fs.StringVarP(&priority, "priority", "p", "", "priority filter: n, n!, n+, or n-")
+
+	if err := fs.Parse(args); err != nil {
+		return parsedCommand{}, err
 	}
 
-	return initCommand{}, fmt.Errorf("cannot assign value %q", values[0])
+	parsed := parsedCommand{
+		name:    "list",
+		help:    globals.Help,
+		globals: resolveRunOptions(app, globals),
+	}
+
+	if parsed.help {
+		return parsed, nil
+	}
+
+	if fs.NArg() > 0 {
+		return parsedCommand{}, fmt.Errorf("list does not accept positional arguments, got %q; use --status and --priority flags", fs.Arg(0))
+	}
+
+	cmd := listCommand{}
+
+	if fs.Changed("status") {
+		statusFilter, excludeStatus, err := parseStatusFilter(status)
+		if err != nil {
+			return parsedCommand{}, err
+		}
+
+		cmd.StatusFilter = statusFilter
+		cmd.ExcludeStatus = excludeStatus
+	} else {
+		// Default: exclude done.
+		cmd.StatusFilter = "done"
+		cmd.ExcludeStatus = true
+	}
+
+	if fs.Changed("priority") {
+		if _, err := parsePriorityFilter(priority); err != nil {
+			return parsedCommand{}, err
+		}
+
+		cmd.PriorityFilter = strings.TrimSpace(priority)
+	}
+
+	parsed.runner = cmd
+
+	return parsed, nil
 }
 
-func parseUsageCommand(values []string) (usageCommand, error) {
-	if len(values) == 0 {
-		return usageCommand{}, nil
-	}
-
-	return usageCommand{}, fmt.Errorf("cannot assign value %q", values[0])
-}
-
-func parseSingleTodoCommand(name string, values []string) (viewCommand, error) {
-	if len(values) == 0 {
-		return viewCommand{}, fmt.Errorf("%s requires a todo id", name)
-	}
-
-	if len(values) > 1 {
-		return viewCommand{}, fmt.Errorf("cannot assign value %q", values[1])
-	}
-
-	return viewCommand{Todo: values[0]}, nil
-}
-
-func parseAssignment(raw string) (string, string, bool) {
-	index := strings.Index(raw, "=")
-	if index <= 0 {
-		return "", "", false
-	}
-
-	return strings.TrimSpace(raw[:index]), raw[index+1:], true
-}
-
-func parseExplicitPriority(raw string) (int, error) {
+func parseStatusFilter(raw string) (string, bool, error) {
 	value := strings.TrimSpace(raw)
-	priority, err := strconv.Atoi(value)
-	if err != nil {
-		return 0, fmt.Errorf("invalid priority %q: must be between 1 and 5", raw)
-	}
-
-	if err := todolist.ValidatePriority(priority); err != nil {
-		return 0, err
-	}
-
-	return priority, nil
-}
-
-func recognizeStatusValue(raw string) (string, bool) {
-	value := strings.TrimSpace(raw)
-	if err := todolist.ValidateStatus(value); err != nil {
-		return "", false
-	}
-
-	return value, true
-}
-
-func recognizePriorityValue(raw string) (int, bool) {
-	value := strings.TrimSpace(raw)
-	if value == "" || !isDigits(value) {
-		return 0, false
-	}
-
-	priority, err := strconv.Atoi(value)
-	if err != nil {
-		return 0, false
-	}
-
-	if err := todolist.ValidatePriority(priority); err != nil {
-		return 0, false
-	}
-
-	return priority, true
-}
-
-func isDigits(value string) bool {
 	if value == "" {
+		return "", false, fmt.Errorf("invalid status %q: must be one of todo, wip, done", value)
+	}
+
+	exclude := strings.HasSuffix(value, "!")
+	if exclude {
+		value = strings.TrimSpace(strings.TrimSuffix(value, "!"))
+	}
+
+	if err := todolist.ValidateStatus(value); err != nil {
+		return "", false, err
+	}
+
+	return value, exclude, nil
+}
+
+func parsePriorityFilter(raw string) (func(int) bool, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return nil, nil
+	}
+
+	operator := "="
+
+	switch {
+	case hasPriorityFilterPrefix(value):
+		operator = value[:1]
+		value = strings.TrimSpace(value[1:])
+	case hasPriorityFilterSuffix(value):
+		operator = value[len(value)-1:]
+		value = strings.TrimSpace(value[:len(value)-1])
+	}
+
+	priority, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid priority filter %q: must use n, n!, n+, or n-", raw)
+	}
+
+	if priority < 0 || priority > todolist.DefaultPriority {
+		return nil, fmt.Errorf("invalid priority filter %q: priority must be between 0 and %d", raw, todolist.DefaultPriority)
+	}
+
+	switch operator {
+	case "=":
+		return func(candidate int) bool { return candidate == priority }, nil
+	case ".", "!":
+		return func(candidate int) bool { return candidate != priority }, nil
+	case "+":
+		return func(candidate int) bool { return candidate > priority }, nil
+	case "-":
+		return func(candidate int) bool { return candidate < priority }, nil
+	default:
+		return nil, fmt.Errorf("invalid priority filter %q", raw)
+	}
+}
+
+func hasPriorityFilterPrefix(value string) bool {
+	switch value[0] {
+	case '.', '+', '-':
+		return true
+	default:
 		return false
 	}
+}
 
-	for _, r := range value {
-		if r < '0' || r > '9' {
-			return false
-		}
+func hasPriorityFilterSuffix(value string) bool {
+	switch value[len(value)-1] {
+	case '!', '+', '-':
+		return true
+	default:
+		return false
 	}
-
-	return true
 }
 
 func isHelpToken(value string) bool {

@@ -33,7 +33,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, true, "Need milk, eggs, and bread.\n")
 
-	exitCode := app.Run([]string{"add", "Buy groceries", "wip", "2"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries", "--status", "wip", "--priority", "2"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -88,7 +88,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 	app.StdinProvided = true
 	app.Stdin = strings.NewReader("Need milk, eggs, bread, and chips.\n")
 
-	exitCode = app.Run([]string{"update", id, "Buy groceries and snacks", "done", "1"})
+	exitCode = app.Run([]string{"update", id, "--title", "Buy groceries and snacks", "--status", "done", "--priority", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected update to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -150,7 +150,7 @@ func TestJSONOutputForCoreCommands(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, true, "Need milk, eggs, and bread.\n")
 
-	exitCode := app.Run([]string{"add", "--json", "Buy groceries", "wip", "2"})
+	exitCode := app.Run([]string{"add", "--json", "--title", "Buy groceries", "--status", "wip", "--priority", "2"})
 	if exitCode != 0 {
 		t.Fatalf("expected json add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -213,22 +213,22 @@ func TestJSONOutputForCoreCommands(t *testing.T) {
 	app.StdinProvided = true
 	app.Stdin = strings.NewReader("Need milk, eggs, bread, and chips.\n")
 
-	exitCode = app.Run([]string{"update", "--json", added.ID, "Buy groceries and snacks", "done", "1"})
+	exitCode = app.Run([]string{"update", "--json", added.ID, "--title", "Buy groceries and snacks", "--status", "done", "--priority", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected json update to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	var updated jsonTodo
-	if err := json.Unmarshal(stdout.Bytes(), &updated); err != nil {
+	var updatedTodo jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &updatedTodo); err != nil {
 		t.Fatalf("unmarshal update json: %v; output=%q", err, stdout.String())
 	}
 
-	if updated.ID != added.ID || updated.Title != "Buy groceries and snacks" || updated.Status != "done" || updated.Priority != 1 {
-		t.Fatalf("unexpected update json: %+v", updated)
+	if updatedTodo.ID != added.ID || updatedTodo.Title != "Buy groceries and snacks" || updatedTodo.Status != "done" || updatedTodo.Priority != 1 {
+		t.Fatalf("unexpected update json: %+v", updatedTodo)
 	}
 
-	if updated.Description != "Need milk, eggs, bread, and chips.\n" {
-		t.Fatalf("expected updated description in json, got %q", updated.Description)
+	if updatedTodo.Description != "Need milk, eggs, bread, and chips.\n" {
+		t.Fatalf("expected updated description in json, got %q", updatedTodo.Description)
 	}
 
 	stdout.Reset()
@@ -256,7 +256,7 @@ func TestJSONOmitsEmptyDescription(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "--json", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "--json", "--title", "Buy groceries"})
 	if exitCode != 0 {
 		t.Fatalf("expected json add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -276,7 +276,7 @@ func TestAddDefaultsStatusAndPriority(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -300,6 +300,30 @@ func TestAddDefaultsStatusAndPriority(t *testing.T) {
 	}
 }
 
+func TestAddPositionalTitle(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"add", "Buy groceries"})
+	if exitCode != 0 {
+		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	id := strings.TrimSpace(stdout.String())
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", id})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "title: Buy groceries") {
+		t.Fatalf("expected positional title, got %q", stdout.String())
+	}
+}
+
 func TestAddUsesConfiguredPrefixFromTodoDirectory(t *testing.T) {
 	t.Helper()
 
@@ -308,7 +332,7 @@ func TestAddUsesConfiguredPrefixFromTodoDirectory(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	exitCode := app.Run([]string{"add", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -319,12 +343,12 @@ func TestAddUsesConfiguredPrefixFromTodoDirectory(t *testing.T) {
 	}
 }
 
-func TestAddAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
+func TestAddTitleFlagHandlesStatusLikeValues(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "title=done"})
+	exitCode := app.Run([]string{"add", "--title", "done"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -348,12 +372,12 @@ func TestAddAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
 	}
 }
 
-func TestAddAllowsLiteralPriorityLikeTitleWithExplicitAssignment(t *testing.T) {
+func TestAddTitleFlagHandlesPriorityLikeValues(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "title=2"})
+	exitCode := app.Run([]string{"add", "--title", "2"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -377,12 +401,12 @@ func TestAddAllowsLiteralPriorityLikeTitleWithExplicitAssignment(t *testing.T) {
 	}
 }
 
-func TestAddRejectsInvalidExplicitStatus(t *testing.T) {
+func TestAddRejectsInvalidStatus(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"add", "status=active", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries", "--status", "active"})
 	if exitCode != 1 {
 		t.Fatalf("expected add to fail, got %d", exitCode)
 	}
@@ -396,7 +420,7 @@ func TestAddRejectsInvalidExplicitStatus(t *testing.T) {
 	}
 }
 
-func TestAddRejectsUnassignableExtraValue(t *testing.T) {
+func TestAddRejectsExtraPositionalArgs(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
@@ -410,18 +434,37 @@ func TestAddRejectsUnassignableExtraValue(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `cannot assign value "snacks"`) {
-		t.Fatalf("expected assignment error, got %q", stderr.String())
+	if !strings.Contains(stderr.String(), "extra") {
+		t.Fatalf("expected extra argument error, got %q", stderr.String())
 	}
 }
 
-func TestUpdateAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) {
+func TestAddRejectsBothPositionalAndFlagTitle(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
-	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
 
-	exitCode := app.Run([]string{"update", id, "title=done"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries", "also groceries"})
+	if exitCode != 1 {
+		t.Fatalf("expected add to fail, got %d", exitCode)
+	}
+
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout, got %q", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), "cannot use both") {
+		t.Fatalf("expected conflict error, got %q", stderr.String())
+	}
+}
+
+func TestUpdateWithFlags(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Buy groceries"})
+
+	exitCode := app.Run([]string{"update", id, "--title", "done"})
 	if exitCode != 0 {
 		t.Fatalf("expected update to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -440,13 +483,13 @@ func TestUpdateAllowsLiteralStatusLikeTitleWithExplicitAssignment(t *testing.T) 
 	}
 }
 
-func TestUpdateRejectsInvalidExplicitPriority(t *testing.T) {
+func TestUpdateRejectsInvalidPriority(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
-	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Buy groceries"})
 
-	exitCode := app.Run([]string{"update", id, "priority=6"})
+	exitCode := app.Run([]string{"update", id, "--priority", "6"})
 	if exitCode != 1 {
 		t.Fatalf("expected update to fail, got %d", exitCode)
 	}
@@ -464,7 +507,7 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
-	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries"})
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Buy groceries"})
 
 	exitCode := app.Run([]string{"update", id})
 	if exitCode != 1 {
@@ -504,7 +547,7 @@ func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "Buy groceries", "wip", "2"})
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Buy groceries", "--status", "wip", "--priority", "2"})
 
 	exitCode := app.Run([]string{"list"})
 	if exitCode != 0 {
@@ -522,7 +565,7 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 	longTitle := "Investigate how to reconcile customer billing exports across regions and vendors"
-	id := addTodoForTest(t, app, stdout, stderr, []string{"add", longTitle, "todo", "3"})
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", longTitle, "--status", "todo", "--priority", "3"})
 
 	exitCode := app.Run([]string{"list"})
 	if exitCode != 0 {
@@ -573,8 +616,8 @@ func TestListExcludesDoneByDefault(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
 
 	exitCode := app.Run([]string{"list"})
 	if exitCode != 0 {
@@ -596,10 +639,10 @@ func TestListFiltersByStatus(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
 
-	exitCode := app.Run([]string{"list", "done"})
+	exitCode := app.Run([]string{"list", "--status", "done"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -619,10 +662,10 @@ func TestListExcludesStatusWithBangSuffix(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "todo"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
 
-	exitCode := app.Run([]string{"list", "done!"})
+	exitCode := app.Run([]string{"list", "--status", "done!"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -637,34 +680,15 @@ func TestListExcludesStatusWithBangSuffix(t *testing.T) {
 	}
 }
 
-func TestListRejectsStatusBangPrefix(t *testing.T) {
-	t.Helper()
-
-	app, stdout, stderr := newTestApp(t, false, "")
-
-	exitCode := app.Run([]string{"list", "!done"})
-	if exitCode != 1 {
-		t.Fatalf("expected list to fail, got %d", exitCode)
-	}
-
-	if stdout.Len() != 0 {
-		t.Fatalf("expected no stdout, got %q", stdout.String())
-	}
-
-	if !strings.Contains(stderr.String(), `invalid status "!done": must be one of todo, wip, done`) {
-		t.Fatalf("expected invalid status error, got %q", stderr.String())
-	}
-}
-
 func TestListFiltersByPriority(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "high priority", "1"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "low priority", "5"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "high priority", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "low priority", "--priority", "5"})
 
-	exitCode := app.Run([]string{"list", "1"})
+	exitCode := app.Run([]string{"list", "--priority", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -684,11 +708,11 @@ func TestListPriorityFilterStillExcludesDoneByDefault(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority one", "todo", "1"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "done priority one", "done", "1"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority five", "todo", "5"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority one", "--status", "todo", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "done priority one", "--status", "done", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority five", "--status", "todo", "--priority", "5"})
 
-	exitCode := app.Run([]string{"list", "1"})
+	exitCode := app.Run([]string{"list", "--priority", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -712,10 +736,10 @@ func TestListPriorityFilterStillExcludesDoneByDefaultInJSON(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "active priority one", "todo", "1"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "done priority one", "done", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority one", "--status", "todo", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "done priority one", "--status", "done", "--priority", "1"})
 
-	exitCode := app.Run([]string{"list", "--json", "1"})
+	exitCode := app.Run([]string{"list", "--json", "--priority", "1"})
 	if exitCode != 0 {
 		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -735,10 +759,10 @@ func TestListFiltersPriorityLessThan(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority two", "2"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority four", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority two", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority four", "--priority", "4"})
 
-	exitCode := app.Run([]string{"list", "3-"})
+	exitCode := app.Run([]string{"list", "--priority", "3-"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -758,10 +782,10 @@ func TestListFiltersPriorityNotEqual(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority three", "3"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "priority four", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority three", "--priority", "3"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority four", "--priority", "4"})
 
-	exitCode := app.Run([]string{"list", "3!"})
+	exitCode := app.Run([]string{"list", "--priority", "3!"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -781,11 +805,11 @@ func TestListSupportsExplicitFilters(t *testing.T) {
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "first todo", "done", "2"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "second todo", "done", "4"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "third todo", "todo", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "done", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done", "--priority", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "third todo", "--status", "todo", "--priority", "4"})
 
-	exitCode := app.Run([]string{"list", "status=done", "priority=3+"})
+	exitCode := app.Run([]string{"list", "--status", "done", "--priority", "3+"})
 	if exitCode != 0 {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -804,12 +828,12 @@ func TestListSupportsExplicitFilters(t *testing.T) {
 	}
 }
 
-func TestListRejectsInvalidPriorityFilter(t *testing.T) {
+func TestListRejectsPositionalArgs(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
-	exitCode := app.Run([]string{"list", "."})
+	exitCode := app.Run([]string{"list", "done"})
 	if exitCode != 1 {
 		t.Fatalf("expected list to fail, got %d", exitCode)
 	}
@@ -818,8 +842,8 @@ func TestListRejectsInvalidPriorityFilter(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `invalid priority filter ".": must use n, n!, n+, or n-`) {
-		t.Fatalf("expected invalid priority filter error, got %q", stderr.String())
+	if !strings.Contains(stderr.String(), "does not accept positional") {
+		t.Fatalf("expected positional argument error, got %q", stderr.String())
 	}
 }
 
@@ -842,7 +866,7 @@ func TestDirectoryOptionIsParsedAfterCommand(t *testing.T) {
 		t.Fatalf("create other todo dir: %v", err)
 	}
 
-	exitCode := app.Run([]string{"add", "-d", otherDir, "Buy groceries"})
+	exitCode := app.Run([]string{"add", "-d", otherDir, "--title", "Buy groceries"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -884,7 +908,7 @@ func TestDirectoryEnvironmentVariableIsUsed(t *testing.T) {
 		t.Fatalf("create env todo dir: %v", err)
 	}
 
-	exitCode := app.Run([]string{"add", "Buy groceries"})
+	exitCode := app.Run([]string{"add", "--title", "Buy groceries"})
 	if exitCode != 0 {
 		t.Fatalf("expected add to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -1062,7 +1086,7 @@ func TestInitRespectsDirectoryOption(t *testing.T) {
 	}
 }
 
-func TestInitRejectsExtraCommandValues(t *testing.T) {
+func TestInitRejectsExtraPositionalArgs(t *testing.T) {
 	t.Helper()
 
 	stdout := &bytes.Buffer{}
@@ -1082,8 +1106,8 @@ func TestInitRejectsExtraCommandValues(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `cannot assign value "extra"`) {
-		t.Fatalf("expected assignment error, got %q", stderr.String())
+	if !strings.Contains(stderr.String(), "does not accept positional") {
+		t.Fatalf("expected positional argument error, got %q", stderr.String())
 	}
 }
 

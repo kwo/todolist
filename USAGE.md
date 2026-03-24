@@ -10,13 +10,13 @@ The todo directory is chosen in this order:
 2. `TODOLIST_DIRECTORY`
 3. `./todo`
 
-Important: this CLI is command-first, so global options come after the command.
+Important: global flags can appear anywhere after the command name.
 
 Examples:
 
 ```bash
 todolist list -d ./todo
-todolist add -d ./work-todos "Buy groceries"
+todolist add -d ./work-todos --title "Buy groceries"
 todolist list --json
 ```
 
@@ -60,31 +60,40 @@ Defaults:
 ### Add a todo
 
 ```bash
-todolist add <title> [<status>] [<priority>]
+todolist add -t <title> [-s <status>] [-p <priority>]
+todolist add --title <title> [--status <status>] [--priority <priority>]
 ```
 
 Examples:
 
 ```bash
-todolist add "Buy groceries"
-todolist add "Buy groceries" wip 2
-todolist add title="done" status=todo priority=3
+todolist add --title "Buy groceries"
+todolist add -t "Buy groceries" -s wip -p 2
+todolist add --title "Buy groceries" --status wip --priority 2
 ```
 
-Agent notes:
+A single positional argument is also accepted as the title:
 
-- If the title could be mistaken for a status or priority, use explicit assignment:
-  - `title="done"`
-  - `title="2"`
-- Non-JSON output prints only the new todo ID.
+```bash
+todolist add "Buy groceries"
+```
+
+Use `-t` / `--title` when the title could be mistaken for another value:
+
+```bash
+todolist add -t "done"
+todolist add --title "2"
+```
+
+Non-JSON output prints only the new todo ID.
 
 ### Add or replace description via stdin
 
 Pipe Markdown on stdin:
 
 ```bash
-printf 'Need milk, eggs, and bread.\n' | todolist add "Buy groceries" wip 2
-printf 'Need milk, eggs, bread, and chips.\n' | todolist update todo-7k9m
+printf 'Need milk, eggs, and bread.\n' | todolist add --title "Buy groceries" --status wip --priority 2
+printf 'Need milk, eggs, bread, and chips.\n' | todolist update todo-7k9m --title "Updated title"
 ```
 
 Rules:
@@ -96,7 +105,8 @@ Rules:
 ### List todos
 
 ```bash
-todolist list [<status-filter>] [<priority-filter>]
+todolist list [-s <status-filter>] [-p <priority-filter>]
+todolist list [--status <status-filter>] [--priority <priority-filter>]
 ```
 
 Default behavior:
@@ -107,13 +117,16 @@ Examples:
 
 ```bash
 todolist list
-todolist list done
-todolist list done!
-todolist list 1
-todolist list 3-
-todolist list 3+
-todolist list 3!
-todolist list status=done priority=3+
+todolist list -s done
+todolist list --status done
+todolist list --status done!
+todolist list -p 1
+todolist list --priority 1
+todolist list --priority 3-
+todolist list --priority 3+
+todolist list --priority 3!
+todolist list -s done -p 3+
+todolist list --status done --priority 3+
 ```
 
 Filter meanings:
@@ -146,15 +159,18 @@ todolist view --json <todo-id>
 ### Update a todo
 
 ```bash
-todolist update <todo-id> [<title>] [<status>] [<priority>]
+todolist update <todo-id> [-t <title>] [-s <status>] [-p <priority>]
+todolist update <todo-id> [--title <title>] [--status <status>] [--priority <priority>]
 ```
 
 Examples:
 
 ```bash
-todolist update todo-7k9m "Buy groceries and snacks"
-todolist update todo-7k9m done 1
-todolist update todo-7k9m title="done" status=wip priority=2
+todolist update todo-7k9m -t "Buy groceries and snacks"
+todolist update todo-7k9m --title "Buy groceries and snacks"
+todolist update todo-7k9m -s done -p 1
+todolist update todo-7k9m --status done --priority 1
+todolist update todo-7k9m --title "Buy groceries" --status wip --priority 2
 ```
 
 Rule:
@@ -174,8 +190,8 @@ Use `--json` whenever an agent needs structured output:
 ```bash
 todolist list --json
 todolist view --json todo-7k9m
-todolist add --json "Buy groceries"
-todolist update --json todo-7k9m status=done
+todolist add --json --title "Buy groceries"
+todolist update --json todo-7k9m --status done
 todolist delete --json todo-7k9m
 ```
 
@@ -183,7 +199,7 @@ Recommended agent workflow:
 
 1. `todolist list --json`
 2. `todolist view --json <id>`
-3. `todolist update --json <id> ...` or `todolist delete --json <id>`
+3. `todolist update --json <id> --status done` or `todolist delete --json <id>`
 
 ### File format
 
