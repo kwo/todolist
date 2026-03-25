@@ -1,0 +1,374 @@
+package cli_test
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
+
+func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Buy groceries", "--status", "wip", "--priority", "2"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	expectedLine := id + "\t2\twip\tBuy groceries\t\n"
+	if stdout.String() != expectedLine {
+		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
+	}
+}
+
+func TestListSortsByPriorityThenTitle(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	lowPriority := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "4"})
+	priorityOneZulu := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Zulu", "--priority", "1"})
+	priorityOneAlpha := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "1"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	expected := strings.Join([]string{
+		priorityOneAlpha + "\t1\ttodo\tAlpha\t",
+		priorityOneZulu + "\t1\ttodo\tZulu\t",
+		lowPriority + "\t4\ttodo\tAlpha\t",
+	}, "\n") + "\n"
+	if stdout.String() != expected {
+		t.Fatalf("expected sorted list output %q, got %q", expected, stdout.String())
+	}
+}
+
+func TestListJSONSortsByPriorityThenTitle(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Bravo", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Zulu", "--priority", "1"})
+
+	exitCode := app.Run([]string{"list", "--json"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(listed) != 3 {
+		t.Fatalf("expected 3 todos, got %+v", listed)
+	}
+
+	titles := []string{listed[0].Title, listed[1].Title, listed[2].Title}
+	if strings.Join(titles, ",") != "Zulu,Alpha,Bravo" {
+		t.Fatalf("expected json list order by priority then title, got %+v", titles)
+	}
+
+	priorities := []int{listed[0].Priority, listed[1].Priority, listed[2].Priority}
+	if priorities[0] != 1 || priorities[1] != 2 || priorities[2] != 2 {
+		t.Fatalf("expected json priorities [1 2 2], got %+v", priorities)
+	}
+}
+
+func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	longTitle := "Investigate how to reconcile customer billing exports across regions and vendors"
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", longTitle, "--status", "todo", "--priority", "3"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	fields := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\t")
+	if len(fields) != 5 {
+		t.Fatalf("expected 5 list columns, got %d in %q", len(fields), stdout.String())
+	}
+
+	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" {
+		t.Fatalf("unexpected list columns %q", stdout.String())
+	}
+
+	if len(fields[3]) != 60 {
+		t.Fatalf("expected truncated title length 60, got %d in %q", len(fields[3]), fields[3])
+	}
+
+	if !strings.HasSuffix(fields[3], "...") {
+		t.Fatalf("expected truncated title to end with ellipsis, got %q", fields[3])
+	}
+
+	if strings.Contains(fields[3], "vendors") {
+		t.Fatalf("expected truncated title not to include full title, got %q", fields[3])
+	}
+
+	if fields[4] != "" {
+		t.Fatalf("expected empty parents column, got %q", fields[4])
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", id})
+	if exitCode != 0 {
+		t.Fatalf("expected json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var viewed jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &viewed); err != nil {
+		t.Fatalf("unmarshal view json: %v; output=%q", err, stdout.String())
+	}
+
+	if viewed.Title != longTitle {
+		t.Fatalf("expected full title in json, got %q", viewed.Title)
+	}
+}
+
+func TestListExcludesDoneByDefault(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be excluded by default, got %q", output)
+	}
+}
+
+func TestListFiltersByStatus(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
+
+	exitCode := app.Run([]string{"list", "--status", "done"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be filtered out, got %q", output)
+	}
+
+	if !strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be included, got %q", output)
+	}
+}
+
+func TestListExcludesStatusWithBangSuffix(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "todo"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done"})
+
+	exitCode := app.Run([]string{"list", "--status", "done!"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "second todo") {
+		t.Fatalf("expected done todo to be excluded, got %q", output)
+	}
+}
+
+func TestListFiltersByPriority(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "high priority", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "low priority", "--priority", "5"})
+
+	exitCode := app.Run([]string{"list", "--priority", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "high priority") {
+		t.Fatalf("expected priority 1 todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "low priority") {
+		t.Fatalf("expected priority 5 todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListPriorityFilterStillExcludesDoneByDefault(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority one", "--status", "todo", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "done priority one", "--status", "done", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority five", "--status", "todo", "--priority", "5"})
+
+	exitCode := app.Run([]string{"list", "--priority", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "active priority one") {
+		t.Fatalf("expected active priority 1 todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "done priority one") {
+		t.Fatalf("expected done priority 1 todo to be excluded by default, got %q", output)
+	}
+
+	if strings.Contains(output, "active priority five") {
+		t.Fatalf("expected priority 5 todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListPriorityFilterStillExcludesDoneByDefaultInJSON(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "active priority one", "--status", "todo", "--priority", "1"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "done priority one", "--status", "done", "--priority", "1"})
+
+	exitCode := app.Run([]string{"list", "--json", "--priority", "1"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(listed) != 1 || listed[0].Title != "active priority one" {
+		t.Fatalf("unexpected json list output: %+v", listed)
+	}
+}
+
+func TestListFiltersPriorityLessThan(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority two", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority four", "--priority", "4"})
+
+	exitCode := app.Run([]string{"list", "--priority", "3-"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "priority two") {
+		t.Fatalf("expected priority 2 todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "priority four") {
+		t.Fatalf("expected priority 4 todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListFiltersPriorityNotEqual(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority three", "--priority", "3"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "priority four", "--priority", "4"})
+
+	exitCode := app.Run([]string{"list", "--priority", "3!"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "priority three") {
+		t.Fatalf("expected priority 3 todo to be filtered out, got %q", output)
+	}
+
+	if !strings.Contains(output, "priority four") {
+		t.Fatalf("expected priority 4 todo to be included, got %q", output)
+	}
+}
+
+func TestListSupportsExplicitFilters(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "first todo", "--status", "done", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "second todo", "--status", "done", "--priority", "4"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "third todo", "--status", "todo", "--priority", "4"})
+
+	exitCode := app.Run([]string{"list", "--status", "done", "--priority", "3+"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "first todo") {
+		t.Fatalf("expected first todo to be filtered out, got %q", output)
+	}
+
+	if !strings.Contains(output, "second todo") {
+		t.Fatalf("expected matching todo to be included, got %q", output)
+	}
+
+	if strings.Contains(output, "third todo") {
+		t.Fatalf("expected non-matching status todo to be filtered out, got %q", output)
+	}
+}
+
+func TestListRejectsPositionalArgs(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	exitCode := app.Run([]string{"list", "done"})
+	if exitCode != 1 {
+		t.Fatalf("expected list to fail, got %d", exitCode)
+	}
+
+	if stdout.Len() != 0 {
+		t.Fatalf("expected no stdout, got %q", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), "does not accept positional") {
+		t.Fatalf("expected positional argument error, got %q", stderr.String())
+	}
+}
