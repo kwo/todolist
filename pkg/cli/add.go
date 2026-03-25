@@ -11,6 +11,7 @@ type addCommand struct {
 	Title    string
 	Status   string
 	Priority int
+	Parents  []string
 }
 
 func (c addCommand) Execute(app *App, options runOptions) error {
@@ -35,11 +36,16 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		Title:        title,
 		Status:       c.Status,
 		Priority:     c.Priority,
+		Parents:      c.Parents,
 		CreatedAt:    now,
 		LastModified: now,
 		Description:  description,
 	}
 	value.ID = todolist.GenerateIDWithPrefix(value, config.Prefix, store.Exists)
+
+	if err := todolist.ValidateParents(value.ID, value.Parents, store.Exists); err != nil {
+		return err
+	}
 
 	if err := store.Create(value); err != nil {
 		return err

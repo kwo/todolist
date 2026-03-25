@@ -38,6 +38,7 @@ Each todo has:
 - `title`
 - `status`
 - `priority`
+- `parents`
 - `createdAt`
 - `lastModified`
 - `description`
@@ -60,8 +61,8 @@ Defaults:
 ### Add a todo
 
 ```bash
-todolist add -t <title> [-s <status>] [-p <priority>]
-todolist add --title <title> [--status <status>] [--priority <priority>]
+todolist add -t <title> [-s <status>] [-p <priority>] [--parent <todo-id> ...]
+todolist add --title <title> [--status <status>] [--priority <priority>] [--parent <todo-id> ...]
 ```
 
 Examples:
@@ -70,6 +71,7 @@ Examples:
 todolist add --title "Buy groceries"
 todolist add -t "Buy groceries" -s wip -p 2
 todolist add --title "Buy groceries" --status wip --priority 2
+todolist add --title "Buy groceries" --parent todo-3h7q --parent todo-9p2d
 ```
 
 A single positional argument is also accepted as the title:
@@ -141,8 +143,10 @@ Filter meanings:
 Text output columns:
 
 ```text
-<id>\t<priority>\t<status>\t<title>
+<id>\t<priority>\t<status>\t<title>\t<first-parent-id>
 ```
+
+If a todo has multiple parents, the last column shows the first parent ID followed by `,...`.
 
 Text list output truncates long titles. Use `view` or `--json` when full values matter.
 
@@ -153,14 +157,15 @@ todolist view <todo-id>
 todolist view --json <todo-id>
 ```
 
-- text output returns the raw Markdown file
+- text output returns the todo Markdown plus a human-friendly `Parents:` section when parents exist
+- each parent in the human-friendly section is shown on a single line as `- <id> <title>`
 - JSON output returns the parsed todo object
 
 ### Update a todo
 
 ```bash
-todolist update <todo-id> [-t <title>] [-s <status>] [-p <priority>]
-todolist update <todo-id> [--title <title>] [--status <status>] [--priority <priority>]
+todolist update <todo-id> [-t <title>] [-s <status>] [-p <priority>] [--parent <todo-id>|<todo-id>! ...]
+todolist update <todo-id> [--title <title>] [--status <status>] [--priority <priority>] [--parent <todo-id>|<todo-id>! ...]
 ```
 
 Examples:
@@ -171,17 +176,24 @@ todolist update todo-7k9m --title "Buy groceries and snacks"
 todolist update todo-7k9m -s done -p 1
 todolist update todo-7k9m --status done --priority 1
 todolist update todo-7k9m --title "Buy groceries" --status wip --priority 2
+todolist update todo-7k9m --parent todo-3h7q --parent todo-9p2d
+todolist update todo-7k9m --parent todo-3h7q!
 ```
 
-Rule:
+Rules:
 
-- `update` must change at least one of title, status, priority, or description via stdin
+- `update` must change at least one of title, status, priority, parents, or description via stdin
+- `--parent <todo-id>` adds a parent
+- `--parent <todo-id>!` removes a parent
+- removing a parent that is not currently assigned fails
 
 ### Delete a todo
 
 ```bash
 todolist delete <todo-id>
 ```
+
+If other todos list the deleted todo in `parents`, the delete still succeeds and that parent reference is removed from those child todos.
 
 ### Prefer JSON for agent automation
 
@@ -211,3 +223,4 @@ Prefer the CLI for normal changes. If manual editing is necessary:
 - keep timestamps in RFC 3339 UTC
 - keep status within `todo|wip|done`
 - keep priority within `1..5`
+- keep `parents` as a YAML list of existing todo IDs

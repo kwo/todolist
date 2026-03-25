@@ -23,12 +23,13 @@ type Store struct {
 }
 
 type frontMatter struct {
-	ID           string `yaml:"id"`
-	Title        string `yaml:"title"`
-	Status       string `yaml:"status"`
-	Priority     int    `yaml:"priority"`
-	CreatedAt    string `yaml:"createdAt"`
-	LastModified string `yaml:"lastModified"`
+	ID           string   `yaml:"id"`
+	Title        string   `yaml:"title"`
+	Status       string   `yaml:"status"`
+	Priority     int      `yaml:"priority"`
+	Parents      []string `yaml:"parents,omitempty"`
+	CreatedAt    string   `yaml:"createdAt"`
+	LastModified string   `yaml:"lastModified"`
 }
 
 // NewStore returns a Store rooted at dir.
@@ -49,7 +50,12 @@ func (s *Store) Create(value Todo) error {
 		return err
 	}
 
-	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTodo(value)), 0o600)
+	value = NormalizeTodo(value)
+	if err := s.validateTodo(value); err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.pathFor(value.ID), serialize(value), 0o600)
 }
 
 // Get loads a todo by ID.
@@ -63,7 +69,16 @@ func (s *Store) Get(id string) (Todo, error) {
 		return Todo{}, fmt.Errorf("read todo %q: %w", id, err)
 	}
 
-	return parse(raw)
+	value, err := parse(raw)
+	if err != nil {
+		return Todo{}, err
+	}
+
+	if err := s.validateTodo(value); err != nil {
+		return Todo{}, fmt.Errorf("read todo %q: %w", id, err)
+	}
+
+	return value, nil
 }
 
 // GetRaw loads the raw todo file bytes by ID.
@@ -118,7 +133,12 @@ func (s *Store) Update(value Todo) error {
 		return err
 	}
 
-	return os.WriteFile(s.pathFor(value.ID), serialize(NormalizeTodo(value)), 0o600)
+	value = NormalizeTodo(value)
+	if err := s.validateTodo(value); err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.pathFor(value.ID), serialize(value), 0o600)
 }
 
 // Delete removes a todo file by ID.
@@ -151,6 +171,22 @@ func (s *Store) pathFor(id string) string {
 	return filepath.Join(s.dir, id+".md")
 }
 
+func (s *Store) validateTodo(value Todo) error {
+	if err := ValidateStatus(value.Status); err != nil {
+		return err
+	}
+
+	if err := ValidatePriority(value.Priority); err != nil {
+		return err
+	}
+
+	if err := ValidateParents(value.ID, value.Parents, s.Exists); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func parse(raw []byte) (Todo, error) {
 	front, description, err := splitFrontMatter(string(raw))
 	if err != nil {
@@ -177,6 +213,7 @@ func parse(raw []byte) (Todo, error) {
 		Title:        value.Title,
 		Status:       value.Status,
 		Priority:     value.Priority,
+		Parents:      value.Parents,
 		CreatedAt:    createdAt,
 		LastModified: lastModified,
 		Description:  description,
@@ -226,6 +263,7 @@ func serialize(value Todo) []byte {
 		Title:        value.Title,
 		Status:       value.Status,
 		Priority:     value.Priority,
+		Parents:      value.Parents,
 		CreatedAt:    formatTime(value.CreatedAt),
 		LastModified: formatTime(value.LastModified),
 	}

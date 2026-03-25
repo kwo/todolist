@@ -11,6 +11,23 @@ type deleteResult struct {
 
 func (c deleteCommand) Execute(app *App, options runOptions) error {
 	store := todolist.NewStore(options.TodoDir)
+	todos, err := store.List()
+	if err != nil {
+		return err
+	}
+
+	for _, value := range todos {
+		if !slicesContains(value.Parents, c.Todo) {
+			continue
+		}
+
+		value.Parents = removeParent(value.Parents, c.Todo)
+		value.LastModified = todolist.NormalizeTimestamp(app.Now())
+		if err := store.Update(value); err != nil {
+			return err
+		}
+	}
+
 	if err := store.Delete(c.Todo); err != nil {
 		return err
 	}

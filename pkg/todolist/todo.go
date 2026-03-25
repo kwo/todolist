@@ -4,6 +4,8 @@ package todolist
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -24,6 +26,8 @@ type Todo struct {
 	Status string `json:"status"`
 	// Priority is the todo priority where 1 is highest and 5 is lowest.
 	Priority int `json:"priority"`
+	// Parents contains zero or more parent todo IDs used for grouping.
+	Parents []string `json:"parents,omitempty"`
 	// CreatedAt is the todo creation timestamp in UTC.
 	CreatedAt time.Time `json:"createdAt"`
 	// LastModified is the timestamp of the most recent successful update in UTC.
@@ -47,10 +51,34 @@ func NormalizeTodo(value Todo) Todo {
 		value.Priority = DefaultPriority
 	}
 
+	value.Parents = NormalizeParents(value.Parents)
 	value.CreatedAt = NormalizeTimestamp(value.CreatedAt)
 	value.LastModified = NormalizeTimestamp(value.LastModified)
 
 	return value
+}
+
+// NormalizeParents trims whitespace, drops empty values, and keeps stable order.
+func NormalizeParents(parents []string) []string {
+	if len(parents) == 0 {
+		return nil
+	}
+
+	normalized := make([]string, 0, len(parents))
+	for _, parent := range parents {
+		parent = strings.TrimSpace(parent)
+		if parent == "" {
+			continue
+		}
+
+		normalized = append(normalized, parent)
+	}
+
+	if len(normalized) == 0 {
+		return nil
+	}
+
+	return normalized
 }
 
 // ValidateStatus reports whether status is one of the supported todo status values.
@@ -67,6 +95,38 @@ func ValidateStatus(status string) error {
 func ValidatePriority(priority int) error {
 	if priority < 1 || priority > 5 {
 		return fmt.Errorf("invalid priority %d: must be between 1 and 5", priority)
+	}
+
+	return nil
+}
+
+// ValidateParents validates parent todo IDs for duplicates, self-references, and existence.
+func ValidateParents(id string, parents []string, exists func(string) bool) error {
+	normalized := NormalizeParents(parents)
+	seen := make(map[string]struct{}, len(normalized))
+	for _, parent := range normalized {
+		if parent == id {
+			return fmt.Errorf("invalid parent %q: a todo cannot be its own parent", parent)
+		}
+
+		if _, ok := seen[parent]; ok {
+			return fmt.Errorf("duplicate parent %q", parent)
+		}
+
+		seen[parent] = struct{}{}
+
+		if exists != nil && !exists(parent) {
+			return fmt.Errorf("parent todo %q does not exist", parent)
+		}
+	}
+
+	if !slices.Equal(normalized, parents) {
+		// Empty or whitespace-only parent IDs are treated as invalid when supplied explicitly.
+		for _, parent := range parents {
+			if strings.TrimSpace(parent) == "" {
+				return fmt.Errorf("invalid parent %q", parent)
+			}
+		}
 	}
 
 	return nil

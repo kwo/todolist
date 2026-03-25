@@ -13,13 +13,14 @@ import (
 )
 
 type jsonTodo struct {
-	ID           string `json:"id"`
-	Title        string `json:"title"`
-	Status       string `json:"status"`
-	Priority     int    `json:"priority"`
-	CreatedAt    string `json:"createdAt"`
-	LastModified string `json:"lastModified"`
-	Description  string `json:"description"`
+	ID           string   `json:"id"`
+	Title        string   `json:"title"`
+	Status       string   `json:"status"`
+	Priority     int      `json:"priority"`
+	Parents      []string `json:"parents"`
+	CreatedAt    string   `json:"createdAt"`
+	LastModified string   `json:"lastModified"`
+	Description  string   `json:"description"`
 }
 
 type jsonDeleteResult struct {
@@ -53,7 +54,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tBuy groceries\n"
+	expectedLine := id + "\t2\twip\tBuy groceries\t\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
@@ -204,7 +205,7 @@ func TestJSONOutputForCoreCommands(t *testing.T) {
 		t.Fatalf("unmarshal view json: %v; output=%q", err, stdout.String())
 	}
 
-	if viewed != added {
+	if viewed.ID != added.ID || viewed.Title != added.Title || viewed.Status != added.Status || viewed.Priority != added.Priority || viewed.CreatedAt != added.CreatedAt || viewed.LastModified != added.LastModified || viewed.Description != added.Description || strings.Join(viewed.Parents, ",") != strings.Join(added.Parents, ",") {
 		t.Fatalf("expected view json to match add json, got %+v want %+v", viewed, added)
 	}
 
@@ -518,8 +519,118 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), "update requires a title, status, priority, or stdin description input") {
+	if !strings.Contains(stderr.String(), "update requires a title, status, priority, parent, or stdin description input") {
 		t.Fatalf("expected update error, got %q", stderr.String())
+	}
+}
+
+func TestAddAndViewParents(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	parentID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent todo"})
+
+	exitCode := app.Run([]string{"add", "--json", "--title", "Child todo", "--parent", parentID})
+	if exitCode != 0 {
+		t.Fatalf("expected add with parent to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var child jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &child); err != nil {
+		t.Fatalf("unmarshal add json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(child.Parents) != 1 || child.Parents[0] != parentID {
+		t.Fatalf("expected child parents to include %q, got %+v", parentID, child.Parents)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", child.ID})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	viewed := stdout.String()
+	if !strings.Contains(viewed, "parents:") || !strings.Contains(viewed, parentID) {
+		t.Fatalf("expected stored parents front matter, got %q", viewed)
+	}
+
+	if !strings.Contains(viewed, "Parents:\n- "+parentID+" Parent todo") {
+		t.Fatalf("expected human-friendly parents section, got %q", viewed)
+	}
+}
+
+func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	parentOne := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent one"})
+	parentTwo := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent two"})
+	childID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Child", "--parent", parentOne, "--parent", parentTwo})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), childID+"\t5\ttodo\tChild\t"+parentOne+",...") {
+		t.Fatalf("expected list parents column, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"update", "--json", childID, "--parent", parentOne + "!"})
+	if exitCode != 0 {
+		t.Fatalf("expected remove parent update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var updated jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &updated); err != nil {
+		t.Fatalf("unmarshal update json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(updated.Parents) != 1 || updated.Parents[0] != parentTwo {
+		t.Fatalf("expected remaining parent %q, got %+v", parentTwo, updated.Parents)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"update", childID, "--parent", parentOne + "!"})
+	if exitCode != 1 {
+		t.Fatalf("expected removing non-assigned parent to fail, got %d", exitCode)
+	}
+
+	if !strings.Contains(stderr.String(), "is not currently assigned") {
+		t.Fatalf("expected non-assigned parent error, got %q", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"delete", parentTwo})
+	if exitCode != 0 {
+		t.Fatalf("expected delete parent to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", childID})
+	if exitCode != 0 {
+		t.Fatalf("expected json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var child jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &child); err != nil {
+		t.Fatalf("unmarshal child json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(child.Parents) != 0 {
+		t.Fatalf("expected parent cleanup on delete, got %+v", child.Parents)
 	}
 }
 
@@ -554,7 +665,7 @@ func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tBuy groceries\n"
+	expectedLine := id + "\t2\twip\tBuy groceries\t\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
@@ -573,8 +684,8 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	}
 
 	fields := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\t")
-	if len(fields) != 4 {
-		t.Fatalf("expected 4 list columns, got %d in %q", len(fields), stdout.String())
+	if len(fields) != 5 {
+		t.Fatalf("expected 5 list columns, got %d in %q", len(fields), stdout.String())
 	}
 
 	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" {
@@ -591,6 +702,10 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 
 	if strings.Contains(fields[3], "vendors") {
 		t.Fatalf("expected truncated title not to include full title, got %q", fields[3])
+	}
+
+	if fields[4] != "" {
+		t.Fatalf("expected empty parents column, got %q", fields[4])
 	}
 
 	stdout.Reset()

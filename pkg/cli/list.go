@@ -44,7 +44,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 	}
 
 	for _, value := range filtered {
-		if _, err = fmt.Fprintf(app.Stdout, "%s\t%d\t%s\t%s\n", value.ID, value.Priority, value.Status, truncateListTitle(value.Title)); err != nil {
+		if _, err = fmt.Fprintf(app.Stdout, "%s\t%d\t%s\t%s\t%s\n", value.ID, value.Priority, value.Status, truncateListTitle(value.Title), formatListParents(value.Parents)); err != nil {
 			return err
 		}
 	}
@@ -62,4 +62,16 @@ func truncateListTitle(title string) string {
 	}
 
 	return string(runes[:maxTitleLength-len([]rune(ellipsis))]) + ellipsis
+}
+
+func formatListParents(parents []string) string {
+	if len(parents) == 0 {
+		return ""
+	}
+
+	if len(parents) == 1 {
+		return parents[0]
+	}
+
+	return parents[0] + ",..."
 }

@@ -1,6 +1,11 @@
 package cli
 
-import "github.com/kwo/todolist/pkg/todolist"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/kwo/todolist/pkg/todolist"
+)
 
 type viewCommand struct {
 	Todo string
@@ -8,12 +13,12 @@ type viewCommand struct {
 
 func (c viewCommand) Execute(app *App, options runOptions) error {
 	store := todolist.NewStore(options.TodoDir)
-	if options.JSON {
-		value, err := store.Get(c.Todo)
-		if err != nil {
-			return err
-		}
+	value, err := store.Get(c.Todo)
+	if err != nil {
+		return err
+	}
 
+	if options.JSON {
 		return writeJSON(app.Stdout, value)
 	}
 
@@ -22,7 +27,34 @@ func (c viewCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
-	_, err = app.Stdout.Write(raw)
+	if _, err = app.Stdout.Write(raw); err != nil {
+		return err
+	}
+
+	if len(value.Parents) == 0 {
+		return nil
+	}
+
+	parentSection, err := renderParentSection(store, value.Parents)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(app.Stdout, "\n\n%s", parentSection)
 
 	return err
+}
+
+func renderParentSection(store *todolist.Store, parentIDs []string) (string, error) {
+	lines := []string{"Parents:"}
+	for _, parentID := range parentIDs {
+		parent, err := store.Get(parentID)
+		if err != nil {
+			return "", err
+		}
+
+		lines = append(lines, fmt.Sprintf("- %s %s", parent.ID, parent.Title))
+	}
+
+	return strings.Join(lines, "\n"), nil
 }
