@@ -671,6 +671,64 @@ func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
 	}
 }
 
+func TestListSortsByPriorityThenTitle(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	lowPriority := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "4"})
+	priorityOneZulu := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Zulu", "--priority", "1"})
+	priorityOneAlpha := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "1"})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	expected := strings.Join([]string{
+		priorityOneAlpha + "\t1\ttodo\tAlpha\t",
+		priorityOneZulu + "\t1\ttodo\tZulu\t",
+		lowPriority + "\t4\ttodo\tAlpha\t",
+	}, "\n") + "\n"
+	if stdout.String() != expected {
+		t.Fatalf("expected sorted list output %q, got %q", expected, stdout.String())
+	}
+}
+
+func TestListJSONSortsByPriorityThenTitle(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Bravo", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Alpha", "--priority", "2"})
+	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Zulu", "--priority", "1"})
+
+	exitCode := app.Run([]string{"list", "--json"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(listed) != 3 {
+		t.Fatalf("expected 3 todos, got %+v", listed)
+	}
+
+	titles := []string{listed[0].Title, listed[1].Title, listed[2].Title}
+	if strings.Join(titles, ",") != "Zulu,Alpha,Bravo" {
+		t.Fatalf("expected json list order by priority then title, got %+v", titles)
+	}
+
+	priorities := []int{listed[0].Priority, listed[1].Priority, listed[2].Priority}
+	if priorities[0] != 1 || priorities[1] != 2 || priorities[2] != 2 {
+		t.Fatalf("expected json priorities [1 2 2], got %+v", priorities)
+	}
+}
+
 func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	t.Helper()
 

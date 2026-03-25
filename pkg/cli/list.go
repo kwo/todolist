@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/kwo/todolist/pkg/todolist"
 )
@@ -39,6 +40,8 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 		filtered = append(filtered, value)
 	}
 
+	sortTodosForList(filtered)
+
 	if options.JSON {
 		return writeJSON(app.Stdout, filtered)
 	}
@@ -50,6 +53,20 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 	}
 
 	return nil
+}
+
+func sortTodosForList(todos []todolist.Todo) {
+	sort.Slice(todos, func(i, j int) bool {
+		if todos[i].Priority != todos[j].Priority {
+			return todos[i].Priority < todos[j].Priority
+		}
+
+		if todos[i].Title != todos[j].Title {
+			return todos[i].Title < todos[j].Title
+		}
+
+		return todos[i].ID < todos[j].ID
+	})
 }
 
 func truncateListTitle(title string) string {

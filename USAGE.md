@@ -114,6 +114,7 @@ todolist list [--status <status-filter>] [--priority <priority-filter>]
 Default behavior:
 
 - `todolist list` excludes `done` todos
+- list results are sorted by priority ascending, then title ascending
 
 Examples:
 

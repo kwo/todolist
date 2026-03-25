@@ -1,10 +1,10 @@
 ---
 id: todo-gjza
 title: sort todos in list by priority, title
-status: todo
+status: done
 priority: 1
 createdAt: "2026-03-25T18:51:56Z"
-lastModified: "2026-03-25T18:51:56Z"
+lastModified: "2026-03-25T18:54:48Z"
 ---
 
 # Sort todos in list output by priority, then title
