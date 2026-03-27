@@ -119,12 +119,14 @@ func parseAddArgs(args []string, app *App) (parsedCommand, error) {
 
 	var priority int
 	var parents []string
+	var depends []string
 
 	fs := newFlagSet("add", &globals)
 	fs.StringVarP(&title, "title", "t", "", "todo title (required)")
 	fs.StringVarP(&status, "status", "s", todolist.DefaultStatus, "todo status: todo|wip|done")
 	fs.IntVarP(&priority, "priority", "p", todolist.DefaultPriority, "priority 1..5")
 	fs.StringArrayVar(&parents, "parent", nil, "assign a parent todo ID; repeat to add multiple parents")
+	fs.StringArrayVar(&depends, "depends", nil, "assign a dependency todo ID; repeat to add multiple dependencies")
 
 	if err := fs.Parse(args); err != nil {
 		return parsedCommand{}, err
@@ -168,6 +170,7 @@ func parseAddArgs(args []string, app *App) (parsedCommand, error) {
 		Status:   status,
 		Priority: priority,
 		Parents:  parents,
+		Depends:  depends,
 	}
 
 	return parsed, nil
@@ -182,12 +185,14 @@ func parseUpdateArgs(args []string, app *App) (parsedCommand, error) {
 
 	var priority int
 	var parents []string
+	var depends []string
 
 	fs := newFlagSet("update", &globals)
 	fs.StringVarP(&title, "title", "t", "", "new title")
 	fs.StringVarP(&status, "status", "s", "", "new status: todo|wip|done")
 	fs.IntVarP(&priority, "priority", "p", 0, "new priority 1..5")
 	fs.StringArrayVar(&parents, "parent", nil, "add a parent todo ID, or remove one with a trailing !")
+	fs.StringArrayVar(&depends, "depends", nil, "add a dependency todo ID, or remove one with a trailing !")
 
 	if err := fs.Parse(args); err != nil {
 		return parsedCommand{}, err
@@ -239,6 +244,11 @@ func parseUpdateArgs(args []string, app *App) (parsedCommand, error) {
 	if fs.Changed("parent") {
 		cmd.Parents = parents
 		cmd.ParentsProvided = true
+	}
+
+	if fs.Changed("depends") {
+		cmd.Depends = depends
+		cmd.DependsProvided = true
 	}
 
 	parsed.runner = cmd

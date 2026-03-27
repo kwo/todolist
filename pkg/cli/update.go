@@ -13,10 +13,12 @@ type updateCommand struct {
 	Status           string
 	Priority         int
 	Parents          []string
+	Depends          []string
 	TitleProvided    bool
 	StatusProvided   bool
 	PriorityProvided bool
 	ParentsProvided  bool
+	DependsProvided  bool
 }
 
 func (c updateCommand) Execute(app *App, options runOptions) error {
@@ -55,12 +57,21 @@ func (c updateCommand) Execute(app *App, options runOptions) error {
 		value.Parents = updatedParents
 	}
 
+	if c.DependsProvided {
+		updatedDepends, dependencyErr := applyDependencyOperations(value.ID, value.Depends, c.Depends, store.Exists)
+		if dependencyErr != nil {
+			return dependencyErr
+		}
+
+		value.Depends = updatedDepends
+	}
+
 	if descriptionProvided {
 		value.Description = description
 	}
 
-	if !c.TitleProvided && !c.StatusProvided && !c.PriorityProvided && !c.ParentsProvided && !descriptionProvided {
-		return fmt.Errorf("update requires a title, status, priority, parent, or stdin description input")
+	if !c.TitleProvided && !c.StatusProvided && !c.PriorityProvided && !c.ParentsProvided && !c.DependsProvided && !descriptionProvided {
+		return fmt.Errorf("update requires a title, status, priority, parent, dependency, or stdin description input")
 	}
 
 	value.LastModified = todolist.NormalizeTimestamp(app.Now())
@@ -70,6 +81,8 @@ func (c updateCommand) Execute(app *App, options runOptions) error {
 	}
 
 	if options.JSON {
+		value = store.WithComputedFields(value)
+
 		return writeJSON(app.Stdout, value)
 	}
 
@@ -132,6 +145,68 @@ func applyParentOperations(todoID string, current, operations []string, exists f
 	}
 
 	return parents, nil
+}
+
+func applyDependencyOperations(todoID string, current, operations []string, exists func(string) bool) ([]string, error) {
+	depends := append([]string(nil), todolist.NormalizeDepends(current)...)
+	seenOps := map[string]string{}
+
+	for _, operation := range operations {
+		raw := strings.TrimSpace(operation)
+		if raw == "" {
+			return nil, fmt.Errorf("invalid dependency %q", operation)
+		}
+
+		action := "add"
+		dependencyID := raw
+		if strings.HasSuffix(raw, "!") {
+			action = "remove"
+			dependencyID = strings.TrimSpace(strings.TrimSuffix(raw, "!"))
+		}
+
+		if dependencyID == "" {
+			return nil, fmt.Errorf("invalid dependency %q", operation)
+		}
+
+		if prior, ok := seenOps[dependencyID]; ok {
+			if prior != action {
+				return nil, fmt.Errorf("conflicting dependency operations for %q", dependencyID)
+			}
+
+			if action == "remove" {
+				return nil, fmt.Errorf("duplicate dependency operation for %q", dependencyID)
+			}
+
+			continue
+		}
+
+		seenOps[dependencyID] = action
+
+		switch action {
+		case "add":
+			if err := todolist.ValidateDepends(todoID, []string{dependencyID}, exists); err != nil {
+				return nil, err
+			}
+
+			if slicesContains(depends, dependencyID) {
+				continue
+			}
+
+			depends = append(depends, dependencyID)
+		case "remove":
+			if dependencyID == todoID {
+				return nil, fmt.Errorf("invalid dependency %q: a todo cannot depend on itself", dependencyID)
+			}
+
+			if !slicesContains(depends, dependencyID) {
+				return nil, fmt.Errorf("dependency %q is not currently assigned", dependencyID)
+			}
+
+			depends = removeParent(depends, dependencyID)
+		}
+	}
+
+	return depends, nil
 }
 
 func slicesContains(values []string, needle string) bool {

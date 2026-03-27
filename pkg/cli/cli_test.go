@@ -18,9 +18,11 @@ type jsonTodo struct {
 	Status       string   `json:"status"`
 	Priority     int      `json:"priority"`
 	Parents      []string `json:"parents"`
+	Depends      []string `json:"depends"`
 	CreatedAt    string   `json:"createdAt"`
 	LastModified string   `json:"lastModified"`
 	Description  string   `json:"description"`
+	Ready        bool     `json:"ready"`
 }
 
 type jsonDeleteResult struct {
@@ -101,7 +103,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tBuy groceries\t\n"
+	expectedLine := id + "\t2\twip\tready\tBuy groceries\t\t\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}

@@ -18,7 +18,7 @@ func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tBuy groceries\t\n"
+	expectedLine := id + "\t2\twip\tready\tBuy groceries\t\t\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
@@ -39,9 +39,9 @@ func TestListSortsByPriorityThenTitle(t *testing.T) {
 	}
 
 	expected := strings.Join([]string{
-		priorityOneAlpha + "\t1\ttodo\tAlpha\t",
-		priorityOneZulu + "\t1\ttodo\tZulu\t",
-		lowPriority + "\t4\ttodo\tAlpha\t",
+		priorityOneAlpha + "\t1\ttodo\tready\tAlpha\t\t",
+		priorityOneZulu + "\t1\ttodo\tready\tZulu\t\t",
+		lowPriority + "\t4\ttodo\tready\tAlpha\t\t",
 	}, "\n") + "\n"
 	if stdout.String() != expected {
 		t.Fatalf("expected sorted list output %q, got %q", expected, stdout.String())
@@ -95,28 +95,32 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	}
 
 	fields := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\t")
-	if len(fields) != 5 {
-		t.Fatalf("expected 5 list columns, got %d in %q", len(fields), stdout.String())
+	if len(fields) != 7 {
+		t.Fatalf("expected 7 list columns, got %d in %q", len(fields), stdout.String())
 	}
 
-	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" {
+	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" || fields[3] != "ready" {
 		t.Fatalf("unexpected list columns %q", stdout.String())
 	}
 
-	if len(fields[3]) != 60 {
-		t.Fatalf("expected truncated title length 60, got %d in %q", len(fields[3]), fields[3])
+	if len(fields[4]) != 60 {
+		t.Fatalf("expected truncated title length 60, got %d in %q", len(fields[4]), fields[4])
 	}
 
-	if !strings.HasSuffix(fields[3], "...") {
-		t.Fatalf("expected truncated title to end with ellipsis, got %q", fields[3])
+	if !strings.HasSuffix(fields[4], "...") {
+		t.Fatalf("expected truncated title to end with ellipsis, got %q", fields[4])
 	}
 
-	if strings.Contains(fields[3], "vendors") {
-		t.Fatalf("expected truncated title not to include full title, got %q", fields[3])
+	if strings.Contains(fields[4], "vendors") {
+		t.Fatalf("expected truncated title not to include full title, got %q", fields[4])
 	}
 
-	if fields[4] != "" {
-		t.Fatalf("expected empty parents column, got %q", fields[4])
+	if fields[5] != "" {
+		t.Fatalf("expected empty parents column, got %q", fields[5])
+	}
+
+	if fields[6] != "" {
+		t.Fatalf("expected empty depends column, got %q", fields[6])
 	}
 
 	stdout.Reset()
@@ -135,6 +139,55 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	if viewed.Title != longTitle {
 		t.Fatalf("expected full title in json, got %q", viewed.Title)
 	}
+}
+
+func TestListIncludesDependsColumnAndReadyInJSON(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	readyDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Ready dep", "--status", "done"})
+	blockedDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked dep", "--status", "wip"})
+	blockedID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked todo", "--depends", readyDependency, "--depends", blockedDependency})
+
+	exitCode := app.Run([]string{"list"})
+	if exitCode != 0 {
+		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), blockedID+"\t5\ttodo\tblocked\tBlocked todo\t\t"+readyDependency+",...") {
+		t.Fatalf("expected depends list column, got %q", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"list", "--json"})
+	if exitCode != 0 {
+		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var listed []jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &listed); err != nil {
+		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
+	}
+
+	for _, todo := range listed {
+		if todo.ID != blockedID {
+			continue
+		}
+
+		if len(todo.Depends) != 2 || todo.Depends[0] != readyDependency || todo.Depends[1] != blockedDependency {
+			t.Fatalf("expected depends in json output, got %+v", todo)
+		}
+
+		if todo.Ready {
+			t.Fatalf("expected ready false when one dependency is not done, got %+v", todo)
+		}
+
+		return
+	}
+
+	t.Fatalf("expected blocked todo %q in json output", blockedID)
 }
 
 func TestListExcludesDoneByDefault(t *testing.T) {

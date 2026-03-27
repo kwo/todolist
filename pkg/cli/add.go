@@ -12,6 +12,7 @@ type addCommand struct {
 	Status   string
 	Priority int
 	Parents  []string
+	Depends  []string
 }
 
 func (c addCommand) Execute(app *App, options runOptions) error {
@@ -37,6 +38,7 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		Status:       c.Status,
 		Priority:     c.Priority,
 		Parents:      c.Parents,
+		Depends:      c.Depends,
 		CreatedAt:    now,
 		LastModified: now,
 		Description:  description,
@@ -47,11 +49,19 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
+	if err := todolist.ValidateDepends(value.ID, value.Depends, store.Exists); err != nil {
+		return err
+	}
+
 	if err := store.Create(value); err != nil {
 		return err
 	}
 
+	value = todolist.NormalizeTodo(value)
+
 	if options.JSON {
+		value = store.WithComputedFields(value)
+
 		return writeJSON(app.Stdout, value)
 	}
 

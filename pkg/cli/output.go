@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/kwo/todolist/pkg/todolist"
 )
 
 func readDescription(reader io.Reader, provided bool) (string, error) {
@@ -30,4 +32,8 @@ func writeJSON(writer io.Writer, value any) error {
 	encoder.SetEscapeHTML(false)
 
 	return encoder.Encode(value)
+}
+
+func storeWithComputedFields(todoDir string, value todolist.Todo) todolist.Todo {
+	return todolist.NewStore(todoDir).WithComputedFields(value)
 }

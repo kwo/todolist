@@ -1,10 +1,10 @@
 ---
 id: todo-ed12
 title: todo dependencies
-status: todo
+status: done
 priority: 2
 createdAt: "2026-03-23T18:50:57Z"
-lastModified: "2026-03-25T18:50:17Z"
+lastModified: "2026-03-27T19:54:11Z"
 ---
 
 # User Story: todo dependencies
@@ -29,7 +29,7 @@ so that I can quickly identify work that is unblocked.
 
 This work adds:
 
-- dependency tracking via `dependsOn`
+- dependency tracking via `depends`
 - computed readiness via `ready`
 - dependency editing through the existing `add` and `update` commands
 - dependency visibility in `list` output
@@ -82,7 +82,7 @@ Tree visualization and cycle inspection are intentionally out of scope for this 
 
 This user story extends todo front matter with:
 
-- `dependsOn` — optional list of todo IDs this todo depends on
+- `depends` — optional list of todo IDs this todo depends on
 
 This user story also adds a computed field:
 
@@ -96,7 +96,7 @@ id: todo-7k9m
 title: Buy groceries
 status: todo
 priority: 2
-dependsOn:
+depends:
   - todo-2w8x
 createdAt: 2026-03-18T10:00:00Z
 lastModified: 2026-03-18T10:00:00Z
@@ -115,7 +115,7 @@ Given:
 
 Then:
 
-- the relationship is stored in `dependsOn`
+- the relationship is stored in `depends`
 - the meaning is: `<todo>` depends on `<depends-on>`
 
 ### Add command support
@@ -126,7 +126,7 @@ Given:
 
 Then:
 
-- each referenced todo ID is stored in `dependsOn`
+- each referenced todo ID is stored in `depends`
 
 ### Update command support
 
@@ -136,7 +136,7 @@ Given:
 
 Then:
 
-- that dependency is added to `dependsOn`
+- that dependency is added to `depends`
 
 Given:
 
@@ -144,7 +144,7 @@ Given:
 
 Then:
 
-- that dependency is removed from `dependsOn`
+- that dependency is removed from `depends`
 
 ### Edge cases
 
@@ -155,7 +155,7 @@ Given:
 Then:
 
 - the dependency is stored at most once
-- duplicate additions do not create duplicate entries in `dependsOn`
+- duplicate additions do not create duplicate entries in `depends`
 
 Given:
 
@@ -202,12 +202,12 @@ Then:
 Given:
 
 - a todo is deleted
-- one or more remaining todos reference it in `dependsOn`
+- one or more remaining todos reference it in `depends`
 
 Then:
 
 - the delete still succeeds
-- the deleted todo ID is removed from every remaining todo's `dependsOn` list
+- the deleted todo ID is removed from every remaining todo's `depends` list
 - each affected todo's `lastModified` is updated
 - readiness is recomputed from the remaining dependencies
 
@@ -221,12 +221,12 @@ Then:
 
 - text output includes a dependency column
 - the dependency column behaves like the parent column
-- JSON output includes `dependsOn`
+- JSON output includes `depends`
 - JSON output includes computed `ready`
 
 ## Scope
 
-- `dependsOn` support in todo metadata
+- `depends` support in todo metadata
 - computed `ready` field
 - `--depends` support in `add`
 - `--depends` add/remove support in `update`
@@ -244,7 +244,7 @@ The following capabilities will be split into separate todos:
 1. There is no `dep` command in this story; dependency editing happens through `add` and `update`.
 2. `list` gains a dependency column that mirrors the parent column behavior.
 3. Tree and cycle functionality are not part of this story and will be tracked separately.
-4. If a todo is deleted and other todos depend on it via `dependsOn`, those references are removed automatically as part of deletion.
+4. If a todo is deleted and other todos depend on it via `depends`, those references are removed automatically as part of deletion.
 5. A missing dependency status is treated as the default status `todo`.
 6. A dependency whose content is malformed, invalid, or otherwise unreadable is treated as not done when computing `ready`.
 7. Duplicate dependencies are deduplicated.

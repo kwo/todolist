@@ -39,9 +39,14 @@ Each todo has:
 - `status`
 - `priority`
 - `parents`
+- `depends`
 - `createdAt`
 - `lastModified`
 - `description`
+
+Computed output fields:
+
+- `ready` = `true` when all dependencies are `done`; otherwise `false`
 
 Valid statuses:
 
@@ -61,8 +66,8 @@ Defaults:
 ### Add a todo
 
 ```bash
-todolist add -t <title> [-s <status>] [-p <priority>] [--parent <todo-id> ...]
-todolist add --title <title> [--status <status>] [--priority <priority>] [--parent <todo-id> ...]
+todolist add -t <title> [-s <status>] [-p <priority>] [--parent <todo-id> ...] [--depends <todo-id> ...]
+todolist add --title <title> [--status <status>] [--priority <priority>] [--parent <todo-id> ...] [--depends <todo-id> ...]
 ```
 
 Examples:
@@ -72,6 +77,7 @@ todolist add --title "Buy groceries"
 todolist add -t "Buy groceries" -s wip -p 2
 todolist add --title "Buy groceries" --status wip --priority 2
 todolist add --title "Buy groceries" --parent todo-3h7q --parent todo-9p2d
+todolist add --title "Buy groceries" --depends todo-3h7q --depends todo-9p2d
 ```
 
 A single positional argument is also accepted as the title:
@@ -144,10 +150,14 @@ Filter meanings:
 Text output columns:
 
 ```text
-<id>\t<priority>\t<status>\t<title>\t<first-parent-id>
+<id>\t<priority>\t<status>\t<ready>\t<title>\t<first-parent-id>\t<first-dependency-id>
 ```
 
-If a todo has multiple parents, the last column shows the first parent ID followed by `,...`.
+The `ready` column shows `ready` when all dependencies are `done`; otherwise `blocked`.
+
+If a todo has multiple parents, the parent column shows the first parent ID followed by `,...`.
+
+If a todo has multiple dependencies, the dependency column shows the first dependency ID followed by `,...`.
 
 Text list output truncates long titles. Use `view` or `--json` when full values matter.
 
@@ -160,13 +170,13 @@ todolist view --json <todo-id>
 
 - text output returns the todo Markdown plus a human-friendly `Parents:` section when parents exist
 - each parent in the human-friendly section is shown on a single line as `- <id> <title>`
-- JSON output returns the parsed todo object
+- JSON output returns the parsed todo object including computed `ready`
 
 ### Update a todo
 
 ```bash
-todolist update <todo-id> [-t <title>] [-s <status>] [-p <priority>] [--parent <todo-id>|<todo-id>! ...]
-todolist update <todo-id> [--title <title>] [--status <status>] [--priority <priority>] [--parent <todo-id>|<todo-id>! ...]
+todolist update <todo-id> [-t <title>] [-s <status>] [-p <priority>] [--parent <todo-id>|<todo-id>! ...] [--depends <todo-id>|<todo-id>! ...]
+todolist update <todo-id> [--title <title>] [--status <status>] [--priority <priority>] [--parent <todo-id>|<todo-id>! ...] [--depends <todo-id>|<todo-id>! ...]
 ```
 
 Examples:
@@ -179,14 +189,20 @@ todolist update todo-7k9m --status done --priority 1
 todolist update todo-7k9m --title "Buy groceries" --status wip --priority 2
 todolist update todo-7k9m --parent todo-3h7q --parent todo-9p2d
 todolist update todo-7k9m --parent todo-3h7q!
+todolist update todo-7k9m --depends todo-3h7q --depends todo-9p2d
+todolist update todo-7k9m --depends todo-3h7q!
 ```
 
 Rules:
 
-- `update` must change at least one of title, status, priority, parents, or description via stdin
+- `update` must change at least one of title, status, priority, parents, dependencies, or description via stdin
 - `--parent <todo-id>` adds a parent
 - `--parent <todo-id>!` removes a parent
 - removing a parent that is not currently assigned fails
+- `--depends <todo-id>` adds a dependency
+- `--depends <todo-id>!` removes a dependency
+- duplicate dependency additions are deduplicated
+- removing a dependency that is not currently assigned fails
 
 ### Delete a todo
 
@@ -194,7 +210,7 @@ Rules:
 todolist delete <todo-id>
 ```
 
-If other todos list the deleted todo in `parents`, the delete still succeeds and that parent reference is removed from those child todos.
+If other todos list the deleted todo in `parents` or `depends`, the delete still succeeds and those references are removed from those child todos.
 
 ### Prefer JSON for agent automation
 
@@ -225,3 +241,5 @@ Prefer the CLI for normal changes. If manual editing is necessary:
 - keep status within `todo|wip|done`
 - keep priority within `1..5`
 - keep `parents` as a YAML list of existing todo IDs
+- keep `depends` as a YAML list of existing todo IDs
+- do not store `ready`; it is computed at read time

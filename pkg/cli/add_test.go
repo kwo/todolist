@@ -253,6 +253,43 @@ func TestAddAndViewParents(t *testing.T) {
 	}
 }
 
+func TestAddDependsDeduplicatesAndComputesReady(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	dependencyID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Dependency", "--status", "done"})
+
+	exitCode := app.Run([]string{"add", "--json", "--title", "Blocked todo", "--depends", dependencyID, "--depends", dependencyID})
+	if exitCode != 0 {
+		t.Fatalf("expected add with dependencies to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var added jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &added); err != nil {
+		t.Fatalf("unmarshal add json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(added.Depends) != 1 || added.Depends[0] != dependencyID {
+		t.Fatalf("expected deduplicated dependency %q, got %+v", dependencyID, added.Depends)
+	}
+
+	if !added.Ready {
+		t.Fatalf("expected ready to be true when dependency is done, got %+v", added)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", added.ID})
+	if exitCode != 0 {
+		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "depends:") || !strings.Contains(stdout.String(), dependencyID) {
+		t.Fatalf("expected stored depends front matter, got %q", stdout.String())
+	}
+}
+
 func TestAddHelpPrintsCommandUsage(t *testing.T) {
 	t.Helper()
 

@@ -28,6 +28,7 @@ type frontMatter struct {
 	Status       string   `yaml:"status"`
 	Priority     int      `yaml:"priority"`
 	Parents      []string `yaml:"parents,omitempty"`
+	Depends      []string `yaml:"depends,omitempty"`
 	CreatedAt    string   `yaml:"createdAt"`
 	LastModified string   `yaml:"lastModified"`
 }
@@ -79,6 +80,13 @@ func (s *Store) Get(id string) (Todo, error) {
 	}
 
 	return value, nil
+}
+
+// WithComputedFields returns a copy of value with computed output fields populated.
+func (s *Store) WithComputedFields(value Todo) Todo {
+	value.Ready = s.isReady(value.Depends)
+
+	return value
 }
 
 // GetRaw loads the raw todo file bytes by ID.
@@ -184,7 +192,52 @@ func (s *Store) validateTodo(value Todo) error {
 		return err
 	}
 
+	if err := ValidateDepends(value.ID, value.Depends, s.Exists); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *Store) isReady(depends []string) bool {
+	for _, dependencyID := range NormalizeDepends(depends) {
+		dependency, err := s.getForReady(dependencyID)
+		if err != nil {
+			return false
+		}
+
+		if dependency.Status != "done" {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Store) getForReady(id string) (Todo, error) {
+	if err := s.ensureDirectory(); err != nil {
+		return Todo{}, err
+	}
+
+	raw, err := os.ReadFile(s.pathFor(id))
+	if err != nil {
+		return Todo{}, fmt.Errorf("read dependency todo %q: %w", id, err)
+	}
+
+	value, err := parse(raw)
+	if err != nil {
+		return Todo{}, err
+	}
+
+	if err := ValidateStatus(value.Status); err != nil {
+		return Todo{}, err
+	}
+
+	if err := ValidatePriority(value.Priority); err != nil {
+		return Todo{}, err
+	}
+
+	return value, nil
 }
 
 func parse(raw []byte) (Todo, error) {
@@ -214,6 +267,7 @@ func parse(raw []byte) (Todo, error) {
 		Status:       value.Status,
 		Priority:     value.Priority,
 		Parents:      value.Parents,
+		Depends:      value.Depends,
 		CreatedAt:    createdAt,
 		LastModified: lastModified,
 		Description:  description,
@@ -264,6 +318,7 @@ func serialize(value Todo) []byte {
 		Status:       value.Status,
 		Priority:     value.Priority,
 		Parents:      value.Parents,
+		Depends:      value.Depends,
 		CreatedAt:    formatTime(value.CreatedAt),
 		LastModified: formatTime(value.LastModified),
 	}

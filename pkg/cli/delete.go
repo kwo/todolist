@@ -17,11 +17,20 @@ func (c deleteCommand) Execute(app *App, options runOptions) error {
 	}
 
 	for _, value := range todos {
-		if !slicesContains(value.Parents, c.Todo) {
+		removedParent := slicesContains(value.Parents, c.Todo)
+		removedDependency := slicesContains(value.Depends, c.Todo)
+		if !removedParent && !removedDependency {
 			continue
 		}
 
-		value.Parents = removeParent(value.Parents, c.Todo)
+		if removedParent {
+			value.Parents = removeParent(value.Parents, c.Todo)
+		}
+
+		if removedDependency {
+			value.Depends = removeParent(value.Depends, c.Todo)
+		}
+
 		value.LastModified = todolist.NormalizeTimestamp(app.Now())
 		if err := store.Update(value); err != nil {
 			return err

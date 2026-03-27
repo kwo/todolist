@@ -19,6 +19,8 @@ func (c viewCommand) Execute(app *App, options runOptions) error {
 	}
 
 	if options.JSON {
+		value = store.WithComputedFields(value)
+
 		return writeJSON(app.Stdout, value)
 	}
 

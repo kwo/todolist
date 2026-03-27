@@ -58,6 +58,18 @@ lastModified: 2026-03-18T10:00:00Z
 	if err := os.WriteFile(parentPath, []byte(parentRaw), 0o600); err != nil {
 		t.Fatalf("write parent todo: %v", err)
 	}
+	dependencyPath := filepath.Join(dir, "todo-dependency.md")
+	dependencyRaw := `---
+id: todo-dependency
+title: Dependency
+status: done
+createdAt: 2026-03-18T10:00:00Z
+lastModified: 2026-03-18T10:00:00Z
+---
+`
+	if err := os.WriteFile(dependencyPath, []byte(dependencyRaw), 0o600); err != nil {
+		t.Fatalf("write dependency todo: %v", err)
+	}
 
 	value := todolist.Todo{
 		ID:           "todo-7k9m",
@@ -65,6 +77,7 @@ lastModified: 2026-03-18T10:00:00Z
 		Status:       "wip",
 		Priority:     2,
 		Parents:      []string{"todo-parent"},
+		Depends:      []string{"todo-dependency"},
 		CreatedAt:    time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
 		LastModified: time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
 		Description:  "Need milk, eggs, and bread.\n",
@@ -81,8 +94,51 @@ lastModified: 2026-03-18T10:00:00Z
 	}
 
 	text := string(raw)
-	if !containsAll(text, "status: wip", "priority: 2", "parents:", "- todo-parent") {
+	if !containsAll(text, "status: wip", "priority: 2", "parents:", "- todo-parent", "depends:", "- todo-dependency") {
 		t.Fatalf("expected serialized metadata fields, got %q", text)
+	}
+}
+
+func TestStoreWithComputedFieldsUsesDependencyStatus(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	dependencyDone := `---
+id: todo-done
+title: Done dependency
+status: done
+createdAt: 2026-03-18T10:00:00Z
+lastModified: 2026-03-18T10:00:00Z
+---
+`
+	dependencyTodo := `---
+id: todo-todo
+title: Todo dependency
+createdAt: 2026-03-18T10:00:00Z
+lastModified: 2026-03-18T10:00:00Z
+---
+`
+	if err := os.WriteFile(filepath.Join(dir, "todo-done.md"), []byte(dependencyDone), 0o600); err != nil {
+		t.Fatalf("write done dependency: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "todo-todo.md"), []byte(dependencyTodo), 0o600); err != nil {
+		t.Fatalf("write todo dependency: %v", err)
+	}
+
+	store := todolist.NewStore(dir)
+	ready := store.WithComputedFields(todolist.Todo{ID: "todo-ready", Depends: []string{"todo-done"}})
+	if !ready.Ready {
+		t.Fatalf("expected ready todo, got %+v", ready)
+	}
+
+	blocked := store.WithComputedFields(todolist.Todo{ID: "todo-blocked", Depends: []string{"todo-done", "todo-todo"}})
+	if blocked.Ready {
+		t.Fatalf("expected blocked todo, got %+v", blocked)
+	}
+
+	missing := store.WithComputedFields(todolist.Todo{ID: "todo-missing", Depends: []string{"todo-missing-dependency"}})
+	if missing.Ready {
+		t.Fatalf("expected missing dependency to report not ready, got %+v", missing)
 	}
 }
 

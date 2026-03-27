@@ -66,7 +66,7 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), "update requires a title, status, priority, parent, or stdin description input") {
+	if !strings.Contains(stderr.String(), "update requires a title, status, priority, parent, dependency, or stdin description input") {
 		t.Fatalf("expected update error, got %q", stderr.String())
 	}
 }
@@ -84,7 +84,7 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	if !strings.Contains(stdout.String(), childID+"\t5\ttodo\tChild\t"+parentOne+",...") {
+	if !strings.Contains(stdout.String(), childID+"\t5\ttodo\tready\tChild\t"+parentOne+",...\t") {
 		t.Fatalf("expected list parents column, got %q", stdout.String())
 	}
 
@@ -140,6 +140,110 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 
 	if len(child.Parents) != 0 {
 		t.Fatalf("expected parent cleanup on delete, got %+v", child.Parents)
+	}
+}
+
+func TestUpdateDependencyOperationsAndDeleteCleanup(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	dependencyOne := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Dependency one"})
+	dependencyTwo := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Dependency two", "--status", "done"})
+	blockedID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked"})
+
+	exitCode := app.Run([]string{"update", "--json", blockedID, "--depends", dependencyOne, "--depends", dependencyOne, "--depends", dependencyTwo})
+	if exitCode != 0 {
+		t.Fatalf("expected add dependency update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var updated jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &updated); err != nil {
+		t.Fatalf("unmarshal update json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(updated.Depends) != 2 || updated.Depends[0] != dependencyOne || updated.Depends[1] != dependencyTwo {
+		t.Fatalf("expected dependency list [%s %s], got %+v", dependencyOne, dependencyTwo, updated.Depends)
+	}
+
+	if updated.Ready {
+		t.Fatalf("expected ready false with unfinished dependency, got %+v", updated)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"update", "--json", blockedID, "--depends", dependencyOne + "!"})
+	if exitCode != 0 {
+		t.Fatalf("expected remove dependency update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"update", blockedID, "--depends", dependencyOne + "!"})
+	if exitCode != 1 {
+		t.Fatalf("expected removing non-assigned dependency to fail, got %d", exitCode)
+	}
+
+	if !strings.Contains(stderr.String(), "is not currently assigned") {
+		t.Fatalf("expected non-assigned dependency error, got %q", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"delete", dependencyTwo})
+	if exitCode != 0 {
+		t.Fatalf("expected delete dependency to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", blockedID})
+	if exitCode != 0 {
+		t.Fatalf("expected json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var blocked jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &blocked); err != nil {
+		t.Fatalf("unmarshal blocked json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(blocked.Depends) != 0 {
+		t.Fatalf("expected dependency cleanup on delete, got %+v", blocked.Depends)
+	}
+
+	if !blocked.Ready {
+		t.Fatalf("expected ready true with no dependencies, got %+v", blocked)
+	}
+}
+
+func TestUpdateRejectsInvalidDependencies(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	id := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked"})
+
+	exitCode := app.Run([]string{"update", id, "--depends", id})
+	if exitCode != 1 {
+		t.Fatalf("expected self dependency to fail, got %d", exitCode)
+	}
+
+	if !strings.Contains(stderr.String(), "cannot depend on itself") {
+		t.Fatalf("expected self dependency error, got %q", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"update", id, "--depends", "todo-missing"})
+	if exitCode != 1 {
+		t.Fatalf("expected missing dependency to fail, got %d", exitCode)
+	}
+
+	if !strings.Contains(stderr.String(), `dependency todo "todo-missing" does not exist`) {
+		t.Fatalf("expected missing dependency error, got %q", stderr.String())
 	}
 }
 

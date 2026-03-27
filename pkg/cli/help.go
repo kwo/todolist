@@ -49,6 +49,7 @@ func commandHelp(command string) string {
 			"  -t, --title <title>     todo title (required if no positional title)",
 			"  -s, --status <status>   todo status: todo|wip|done (default \"todo\")",
 			"  -p, --priority <n>      priority 1..5 (default 5)",
+			"      --depends <id>      dependency todo ID; repeat to add multiple",
 			"",
 			"A single positional argument is accepted as the title.",
 			"Use --title when the title could be mistaken for another value.",
@@ -87,8 +88,9 @@ func commandHelp(command string) string {
 			"  -t, --title <title>     new title",
 			"  -s, --status <status>   new status: todo|wip|done",
 			"  -p, --priority <n>      new priority 1..5",
+			"      --depends <id>      add a dependency todo ID, or remove one with !",
 			"",
-			"At least one of --title, --status, --priority, or stdin description is required.",
+			"At least one of --title, --status, --priority, --parent, --depends, or stdin description is required.",
 			"",
 		}, "\n")
 	case "delete":

@@ -5,8 +5,10 @@ status: todo
 priority: 3
 parents:
     - todo-ed12
+depends:
+    - todo-ed12
 createdAt: "2026-03-25T18:46:39Z"
-lastModified: "2026-03-25T18:50:17Z"
+lastModified: "2026-03-27T19:43:36Z"
 ---
 
 # User Story: dependency cycle detection

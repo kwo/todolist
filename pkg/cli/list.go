@@ -37,7 +37,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 			continue
 		}
 
-		filtered = append(filtered, value)
+		filtered = append(filtered, storeWithComputedFields(options.TodoDir, value))
 	}
 
 	sortTodosForList(filtered)
@@ -47,7 +47,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 	}
 
 	for _, value := range filtered {
-		if _, err = fmt.Fprintf(app.Stdout, "%s\t%d\t%s\t%s\t%s\n", value.ID, value.Priority, value.Status, truncateListTitle(value.Title), formatListParents(value.Parents)); err != nil {
+		if _, err = fmt.Fprintf(app.Stdout, "%s\t%d\t%s\t%s\t%s\t%s\t%s\n", value.ID, value.Priority, value.Status, formatListReady(value.Ready), truncateListTitle(value.Title), formatListParents(value.Parents), formatListParents(value.Depends)); err != nil {
 			return err
 		}
 	}
@@ -91,4 +91,12 @@ func formatListParents(parents []string) string {
 	}
 
 	return parents[0] + ",..."
+}
+
+func formatListReady(ready bool) string {
+	if ready {
+		return "ready"
+	}
+
+	return "blocked"
 }
