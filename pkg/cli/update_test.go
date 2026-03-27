@@ -84,7 +84,7 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	if !strings.Contains(stdout.String(), childID+"\t5\ttodo\tready\tChild\t"+parentOne+",...\t") {
+	if !strings.Contains(stdout.String(), childID+"\t5\ttodo\tChild\t"+parentOne+",...\t") {
 		t.Fatalf("expected list parents column, got %q", stdout.String())
 	}
 

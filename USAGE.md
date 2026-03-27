@@ -113,13 +113,14 @@ Rules:
 ### List todos
 
 ```bash
-todolist list [-s <status-filter>] [-p <priority-filter>]
-todolist list [--status <status-filter>] [--priority <priority-filter>]
+todolist list [-s <status-filter>] [-p <priority-filter>] [--ready <true|false>]
+todolist list [--status <status-filter>] [--priority <priority-filter>] [--ready <true|false>]
 ```
 
 Default behavior:
 
 - `todolist list` excludes `done` todos
+- `todolist list` includes only todos whose computed `ready` is `true`
 - list results are sorted by priority ascending, then title ascending
 
 Examples:
@@ -134,8 +135,11 @@ todolist list --priority 1
 todolist list --priority 3-
 todolist list --priority 3+
 todolist list --priority 3!
+todolist list --ready true
+todolist list --ready false
 todolist list -s done -p 3+
 todolist list --status done --priority 3+
+todolist list --status wip --priority 2 --ready true
 ```
 
 Filter meanings:
@@ -146,20 +150,22 @@ Filter meanings:
 - `3-` = priorities less than 3
 - `3+` = priorities greater than 3
 - `3!` = priorities not equal to 3
+- `true` = only ready todos
+- `false` = only blocked todos
 
 Text output columns:
 
 ```text
-<id>\t<priority>\t<status>\t<ready>\t<title>\t<first-parent-id>\t<first-dependency-id>
+<id>\t<priority>\t<status>\t<title>\t<first-parent-id>\t<first-dependency-id>
 ```
-
-The `ready` column shows `ready` when all dependencies are `done`; otherwise `blocked`.
 
 If a todo has multiple parents, the parent column shows the first parent ID followed by `,...`.
 
 If a todo has multiple dependencies, the dependency column shows the first dependency ID followed by `,...`.
 
 Text list output truncates long titles. Use `view` or `--json` when full values matter.
+
+JSON list output continues to include computed `ready`.
 
 ### View a todo
 

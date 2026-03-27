@@ -103,7 +103,7 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tready\tBuy groceries\t\t\n"
+	expectedLine := id + "\t2\twip\tBuy groceries\t\t\n"
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}

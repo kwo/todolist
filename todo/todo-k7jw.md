@@ -1,14 +1,14 @@
 ---
 id: todo-k7jw
 title: default list filter shows only ready items
-status: todo
+status: done
 priority: 5
 parents:
     - todo-ed12
 depends:
     - todo-ed12
 createdAt: "2026-03-27T19:53:45Z"
-lastModified: "2026-03-27T20:14:03Z"
+lastModified: "2026-03-27T20:27:19Z"
 ---
 
 # User Story: ready-only default list filter
