@@ -6,9 +6,9 @@ priority: 5
 parents:
     - todo-96ke
 depends:
-    - todo-sscg
+    - todo-rvwr
 createdAt: "2026-03-28T18:50:55Z"
-lastModified: "2026-03-28T18:50:55Z"
+lastModified: "2026-03-28T19:47:21Z"
 ---
 
 # User Story: support Homebrew and Linuxbrew installation from release artifacts
