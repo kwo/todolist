@@ -4,6 +4,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"runtime/debug"
 	"time"
 )
 
@@ -21,6 +22,8 @@ type App struct {
 	TodoDir string
 	// Now returns the current time and is injectable for tests.
 	Now func() time.Time
+	// ReadBuildInfo returns embedded Go build metadata and is injectable for tests.
+	ReadBuildInfo func() (*debug.BuildInfo, bool)
 	// UsageText is the embedded usage documentation printed by the usage command.
 	UsageText string
 }
@@ -55,6 +58,7 @@ func NewApp(stdin io.Reader, stdout, stderr io.Writer, stdinProvided bool) *App 
 		StdinProvided: stdinProvided,
 		TodoDir:       "./todo",
 		Now:           time.Now,
+		ReadBuildInfo: debug.ReadBuildInfo,
 	}
 }
 

@@ -37,6 +37,8 @@ func parseArgs(args []string, app *App) (parsedCommand, error) {
 		return parseSingleIDCommand(commandName, commandArgs, app, func(id string) commandRunner { return deleteCommand{Todo: id} })
 	case "usage":
 		return parseNoArgCommand(commandName, commandArgs, app, usageCommand{})
+	case "version":
+		return parseNoArgCommand(commandName, commandArgs, app, versionCommand{})
 	default:
 		return parsedCommand{}, fmt.Errorf("unknown command %q", commandName)
 	}

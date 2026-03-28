@@ -1,12 +1,12 @@
 ---
 id: todo-gag2
 title: add todolist version command using Go build metadata
-status: todo
+status: done
 priority: 5
 parents:
     - todo-96ke
 createdAt: "2026-03-28T18:50:43Z"
-lastModified: "2026-03-28T19:01:21Z"
+lastModified: "2026-03-28T19:11:44Z"
 ---
 
 # User Story: add version command using Go build metadata

@@ -174,6 +174,22 @@ todolist view --json <todo-id>
 - each parent in the human-friendly section is shown on a single line as `- <id> <title>`
 - JSON output returns the parsed todo object including computed `ready`
 
+### Show version information
+
+```bash
+todolist version
+todolist version --json
+```
+
+Text output prints only the version string.
+
+JSON output returns:
+
+- `version`
+- `commit` when embedded VCS metadata is available, shortened to 8 characters
+- `dirty` when embedded VCS metadata reports a dirty working tree
+- `runtime` when Go build metadata is available
+
 ### Update a todo
 
 ```bash

@@ -29,6 +29,7 @@ func rootHelp() string {
 		"  update   update a todo",
 		"  delete   delete a todo",
 		"  usage    print usage documentation",
+		"  version  print version information",
 		"",
 		"Global flags:",
 		"      --json  enable JSON output",
@@ -103,6 +104,12 @@ func commandHelp(command string) string {
 		return strings.Join([]string{
 			"Usage:",
 			"  todolist usage [flags]",
+			"",
+		}, "\n")
+	case "version":
+		return strings.Join([]string{
+			"Usage:",
+			"  todolist version [flags]",
 			"",
 		}, "\n")
 	default:
