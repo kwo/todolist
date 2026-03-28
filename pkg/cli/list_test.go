@@ -162,41 +162,37 @@ func TestListDefaultShowsOnlyReadyTodos(t *testing.T) {
 	if strings.Contains(stdout.String(), blockedID) {
 		t.Fatalf("expected blocked todo to be excluded by default, got %q", stdout.String())
 	}
+}
 
-	stdout.Reset()
-	stderr.Reset()
+func TestListAllIncludesReadyAndBlockedTodos(t *testing.T) {
+	t.Helper()
 
-	exitCode = app.Run([]string{"list", "--ready=false"})
+	app, stdout, stderr := newTestApp(t, false, "")
+	readyDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Ready dep", "--status", "done"})
+	blockedDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked dep", "--status", "wip"})
+	readyID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Ready todo", "--depends", readyDependency})
+	blockedID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked todo", "--depends", readyDependency, "--depends", blockedDependency})
+
+	exitCode := app.Run([]string{"list", "--all"})
 	if exitCode != 0 {
-		t.Fatalf("expected blocked list to succeed, got %d: %s", exitCode, stderr.String())
+		t.Fatalf("expected list --all to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	if !strings.Contains(stdout.String(), blockedID+"\t5\ttodo\tBlocked todo\t\t"+readyDependency+",...") {
-		t.Fatalf("expected blocked todo in ready=false list output, got %q", stdout.String())
+	output := stdout.String()
+	if !strings.Contains(output, readyID+"\t5\ttodo\tReady todo\t\t"+readyDependency) {
+		t.Fatalf("expected ready todo in --all output, got %q", output)
 	}
 
-	if strings.Contains(stdout.String(), readyID) {
-		t.Fatalf("expected ready todo to be excluded from ready=false output, got %q", stdout.String())
-	}
-
-	stdout.Reset()
-	stderr.Reset()
-
-	exitCode = app.Run([]string{"list", "--ready", "false"})
-	if exitCode != 0 {
-		t.Fatalf("expected blocked list with separate bool value to succeed, got %d: %s", exitCode, stderr.String())
-	}
-
-	if !strings.Contains(stdout.String(), blockedID) || strings.Contains(stdout.String(), readyID) {
-		t.Fatalf("expected only blocked todos with separate bool arg, got %q", stdout.String())
+	if !strings.Contains(output, blockedID+"\t5\ttodo\tBlocked todo\t\t"+readyDependency+",...") {
+		t.Fatalf("expected blocked todo in --all output, got %q", output)
 	}
 
 	stdout.Reset()
 	stderr.Reset()
 
-	exitCode = app.Run([]string{"list", "--json", "--ready=false"})
+	exitCode = app.Run([]string{"list", "--json", "--all"})
 	if exitCode != 0 {
-		t.Fatalf("expected json list to succeed, got %d: %s", exitCode, stderr.String())
+		t.Fatalf("expected json list --all to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
 	var listed []jsonTodo
@@ -204,57 +200,60 @@ func TestListDefaultShowsOnlyReadyTodos(t *testing.T) {
 		t.Fatalf("unmarshal list json: %v; output=%q", err, stdout.String())
 	}
 
+	var sawReady bool
+	var sawBlocked bool
 	for _, todo := range listed {
-		if todo.ID != blockedID {
-			continue
+		switch todo.ID {
+		case readyID:
+			sawReady = true
+		case blockedID:
+			sawBlocked = true
+			if len(todo.Depends) != 2 || todo.Depends[0] != readyDependency || todo.Depends[1] != blockedDependency {
+				t.Fatalf("expected depends in json output, got %+v", todo)
+			}
+			if todo.Ready {
+				t.Fatalf("expected blocked todo to have ready=false, got %+v", todo)
+			}
 		}
-
-		if len(todo.Depends) != 2 || todo.Depends[0] != readyDependency || todo.Depends[1] != blockedDependency {
-			t.Fatalf("expected depends in json output, got %+v", todo)
-		}
-
-		if todo.Ready {
-			t.Fatalf("expected ready false when one dependency is not done, got %+v", todo)
-		}
-
-		return
 	}
 
-	t.Fatalf("expected blocked todo %q in json output", blockedID)
+	if !sawReady || !sawBlocked {
+		t.Fatalf("expected both ready and blocked todos in json output, got %+v", listed)
+	}
 }
 
-func TestListRejectsInvalidReadyFilter(t *testing.T) {
+func TestListRejectsRemovedReadyFlag(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 
 	exitCode := app.Run([]string{"list", "--ready", "maybe"})
 	if exitCode != 1 {
-		t.Fatalf("expected invalid ready filter to fail, got %d", exitCode)
+		t.Fatalf("expected removed ready flag to fail, got %d", exitCode)
 	}
 
 	if stdout.Len() != 0 {
 		t.Fatalf("expected no stdout, got %q", stdout.String())
 	}
 
-	if !strings.Contains(stderr.String(), `invalid ready "maybe": must be true or false`) {
-		t.Fatalf("expected invalid ready error, got %q", stderr.String())
+	if !strings.Contains(stderr.String(), "unknown flag: --ready") {
+		t.Fatalf("expected unknown ready flag error, got %q", stderr.String())
 	}
 }
 
-func TestListReadyFilterComposesWithStatusAndPriority(t *testing.T) {
+func TestListAllComposesWithStatusAndPriority(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 	readyDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Ready dep", "--status", "done"})
 	blockedDependency := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked dep", "--status", "wip"})
-	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked todo", "--status", "todo", "--priority", "2", "--depends", blockedDependency})
+	blockedID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Blocked wip", "--status", "wip", "--priority", "2", "--depends", blockedDependency})
 	matchingID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Ready wip", "--status", "wip", "--priority", "2", "--depends", readyDependency})
 	addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Wrong priority", "--status", "wip", "--priority", "4", "--depends", readyDependency})
 
-	exitCode := app.Run([]string{"list", "--status", "wip", "--priority", "2", "--ready=true"})
+	exitCode := app.Run([]string{"list", "--status", "wip", "--priority", "2", "--all"})
 	if exitCode != 0 {
-		t.Fatalf("expected composed list filters to succeed, got %d: %s", exitCode, stderr.String())
+		t.Fatalf("expected composed list filters with --all to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
 	output := stdout.String()
@@ -262,8 +261,12 @@ func TestListReadyFilterComposesWithStatusAndPriority(t *testing.T) {
 		t.Fatalf("expected matching ready todo, got %q", output)
 	}
 
-	if strings.Contains(output, "Blocked todo") || strings.Contains(output, "Wrong priority") {
-		t.Fatalf("expected only composed filter match, got %q", output)
+	if !strings.Contains(output, blockedID+"\t2\twip\tBlocked wip") {
+		t.Fatalf("expected matching blocked todo, got %q", output)
+	}
+
+	if strings.Contains(output, "Wrong priority") {
+		t.Fatalf("expected only priority 2 matches, got %q", output)
 	}
 }
 

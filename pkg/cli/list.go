@@ -11,7 +11,7 @@ type listCommand struct {
 	StatusFilter   string
 	ExcludeStatus  bool
 	PriorityFilter string
-	ReadyFilter    bool
+	All            bool
 }
 
 func (c listCommand) Execute(app *App, options runOptions) error {
@@ -40,7 +40,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 			continue
 		}
 
-		if value.Ready != c.ReadyFilter {
+		if !c.All && !value.Ready {
 			continue
 		}
 

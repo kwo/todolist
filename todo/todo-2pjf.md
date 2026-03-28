@@ -1,10 +1,10 @@
 ---
 id: todo-2pjf
 title: replace list --ready filter with valueless --all flag
-status: todo
+status: done
 priority: 5
 createdAt: "2026-03-28T19:52:09Z"
-lastModified: "2026-03-28T19:52:09Z"
+lastModified: "2026-03-28T20:05:34Z"
 ---
 
 # User Story: replace `--ready` list filtering with `--all`

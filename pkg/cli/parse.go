@@ -263,12 +263,12 @@ func parseListArgs(args []string, app *App) (parsedCommand, error) {
 	var status string
 
 	var priority string
-	var ready string
+	var all bool
 
 	fs := newFlagSet("list", &globals)
 	fs.StringVarP(&status, "status", "s", "", "status filter: todo|wip|done, append ! to exclude")
 	fs.StringVarP(&priority, "priority", "p", "", "priority filter: n, n!, n+, or n-")
-	fs.StringVar(&ready, "ready", "true", "ready filter: true for ready todos, false for blocked todos")
+	fs.BoolVar(&all, "all", false, "include both ready and blocked todos")
 
 	if err := fs.Parse(args); err != nil {
 		return parsedCommand{}, err
@@ -312,12 +312,7 @@ func parseListArgs(args []string, app *App) (parsedCommand, error) {
 		cmd.PriorityFilter = strings.TrimSpace(priority)
 	}
 
-	parsedReady, err := parseReadyFilter(ready)
-	if err != nil {
-		return parsedCommand{}, err
-	}
-
-	cmd.ReadyFilter = parsedReady
+	cmd.All = all
 
 	parsed.runner = cmd
 
@@ -380,20 +375,6 @@ func parsePriorityFilter(raw string) (func(int) bool, error) {
 	default:
 		return nil, fmt.Errorf("invalid priority filter %q", raw)
 	}
-}
-
-func parseReadyFilter(raw string) (bool, error) {
-	value := strings.TrimSpace(raw)
-	if value == "" {
-		return false, fmt.Errorf("invalid ready %q: must be true or false", raw)
-	}
-
-	parsed, err := strconv.ParseBool(value)
-	if err != nil {
-		return false, fmt.Errorf("invalid ready %q: must be true or false", raw)
-	}
-
-	return parsed, nil
 }
 
 func hasPriorityFilterPrefix(value string) bool {

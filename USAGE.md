@@ -109,8 +109,8 @@ Rules:
 ### List todos
 
 ```bash
-todolist list [-s <status-filter>] [-p <priority-filter>] [--ready <true|false>]
-todolist list [--status <status-filter>] [--priority <priority-filter>] [--ready <true|false>]
+todolist list [-s <status-filter>] [-p <priority-filter>] [--all]
+todolist list [--status <status-filter>] [--priority <priority-filter>] [--all]
 ```
 
 Default behavior:
@@ -118,11 +118,13 @@ Default behavior:
 - `todolist list` excludes `done` todos
 - `todolist list` includes only todos whose computed `ready` is `true`
 - list results are sorted by priority ascending, then title ascending
+- `--all` disables readiness filtering so both ready and blocked todos are shown
 
 Examples:
 
 ```bash
 todolist list
+todolist list --all
 todolist list -s done
 todolist list --status done
 todolist list --status done!
@@ -131,11 +133,9 @@ todolist list --priority 1
 todolist list --priority 3-
 todolist list --priority 3+
 todolist list --priority 3!
-todolist list --ready true
-todolist list --ready false
-todolist list -s done -p 3+
+todolist list -s done -p 3+ --all
 todolist list --status done --priority 3+
-todolist list --status wip --priority 2 --ready true
+todolist list --status wip --priority 2 --all
 ```
 
 Filter meanings:
@@ -146,8 +146,7 @@ Filter meanings:
 - `3-` = priorities less than 3
 - `3+` = priorities greater than 3
 - `3!` = priorities not equal to 3
-- `true` = only ready todos
-- `false` = only blocked todos
+- `--all` = include both ready and blocked todos
 
 Text output columns:
 

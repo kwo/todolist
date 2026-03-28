@@ -69,7 +69,7 @@ func commandHelp(command string) string {
 			"Flags:",
 			"  -s, --status <filter>     status filter: todo|wip|done, append ! to exclude",
 			"  -p, --priority <filter>   priority filter: n, n!, n+, or n-",
-			"      --ready <bool>       ready filter: true for ready todos, false for blocked todos",
+			"      --all                include both ready and blocked todos",
 			"",
 			"By default, done todos are excluded and only ready todos are shown.",
 			"",
