@@ -4,7 +4,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"time"
 )
 
@@ -18,20 +17,17 @@ type App struct {
 	Stderr io.Writer
 	// StdinProvided reports whether stdin should be treated as piped input.
 	StdinProvided bool
-	// TodoDir is the default todo directory used by the application.
+	// TodoDir is the todo directory used by the application.
 	TodoDir string
 	// Now returns the current time and is injectable for tests.
 	Now func() time.Time
-	// LookupEnv resolves environment variables and is injectable for tests.
-	LookupEnv func(string) (string, bool)
 	// UsageText is the embedded usage documentation printed by the usage command.
 	UsageText string
 }
 
 type globalOptions struct {
-	Directory string
-	JSON      bool
-	Help      bool
+	JSON bool
+	Help bool
 }
 
 type runOptions struct {
@@ -59,7 +55,6 @@ func NewApp(stdin io.Reader, stdout, stderr io.Writer, stdinProvided bool) *App 
 		StdinProvided: stdinProvided,
 		TodoDir:       "./todo",
 		Now:           time.Now,
-		LookupEnv:     os.LookupEnv,
 	}
 }
 
@@ -88,19 +83,8 @@ func (a *App) Run(args []string) int {
 }
 
 func resolveRunOptions(app *App, globals globalOptions) runOptions {
-	todoDir := app.TodoDir
-	if app.LookupEnv != nil {
-		if value, ok := app.LookupEnv("TODOLIST_DIRECTORY"); ok {
-			todoDir = value
-		}
-	}
-
-	if globals.Directory != "" {
-		todoDir = globals.Directory
-	}
-
 	return runOptions{
-		TodoDir: todoDir,
+		TodoDir: app.TodoDir,
 		JSON:    globals.JSON,
 	}
 }

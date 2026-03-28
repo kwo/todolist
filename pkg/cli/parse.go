@@ -45,7 +45,6 @@ func parseArgs(args []string, app *App) (parsedCommand, error) {
 // newFlagSet creates a new pflag.FlagSet for a command with global flags registered.
 func newFlagSet(name string, globals *globalOptions) *flag.FlagSet {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	fs.StringVarP(&globals.Directory, "directory", "d", "", "use a specific todo directory")
 	fs.BoolVar(&globals.JSON, "json", false, "enable JSON output")
 	fs.BoolVarP(&globals.Help, "help", "h", false, "show help")
 

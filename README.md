@@ -103,16 +103,10 @@ Todo files should be named:
 
 ### Directory Selection
 
-The CLI should read and write todo Markdown files from a todo directory determined as follows:
-
-1. `-d, --directory` global CLI option
-2. `TODOLIST_DIRECTORY` environment variable
-3. default `./todo`
-
-The CLI is command-first, so global options are written after the command. Example:
+The CLI reads and writes todo Markdown files from `./todo`.
 
 ```bash
-todolist list -d ./work-todos
+todolist list
 ```
 
 The todo directory may also contain a `.todos` configuration file.

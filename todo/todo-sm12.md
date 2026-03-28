@@ -1,10 +1,10 @@
 ---
 id: todo-sm12
 title: remove configurable directory and hardcode ./todo
-status: todo
+status: done
 priority: 5
 createdAt: "2026-03-28T18:42:44Z"
-lastModified: "2026-03-28T18:42:44Z"
+lastModified: "2026-03-28T19:08:53Z"
 ---
 
 # User Story: remove configurable todo directory

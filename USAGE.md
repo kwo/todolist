@@ -4,19 +4,15 @@ Use the `todolist` CLI to manage todos. Prefer the CLI over editing todo files d
 
 ### Directory resolution
 
-The todo directory is chosen in this order:
+The todo directory is always:
 
-1. `-d` / `--directory`
-2. `TODOLIST_DIRECTORY`
-3. `./todo`
-
-Important: global flags can appear anywhere after the command name.
+1. `./todo`
 
 Examples:
 
 ```bash
-todolist list -d ./todo
-todolist add -d ./work-todos --title "Buy groceries"
+todolist list
+todolist add --title "Buy groceries"
 todolist list --json
 ```
 

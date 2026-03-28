@@ -31,9 +31,8 @@ func rootHelp() string {
 		"  usage    print usage documentation",
 		"",
 		"Global flags:",
-		"  -d, --directory <dir>  use a specific todo directory",
-		"      --json             enable JSON output",
-		"  -h, --help             show help",
+		"      --json  enable JSON output",
+		"  -h, --help  show help",
 		"",
 	}, "\n")
 }

@@ -63,9 +63,6 @@ func newTestApp(t *testing.T, stdinProvided bool, stdin string) (*cli.App, *byte
 		"Use `todolist list --json` for structured output.",
 		"",
 	}, "\n")
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 	app.Now = func() time.Time {
 		return time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC)
 	}

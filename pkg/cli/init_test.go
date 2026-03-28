@@ -18,9 +18,6 @@ func TestInitCreatesTodoDirectoryAndConfig(t *testing.T) {
 	todoDir := filepath.Join(t.TempDir(), "todo")
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = todoDir
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init"})
 	if exitCode != 0 {
@@ -73,9 +70,6 @@ func TestInitCreatesMissingConfigInExistingDirectory(t *testing.T) {
 
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = todoDir
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init"})
 	if exitCode != 0 {
@@ -114,9 +108,6 @@ func TestInitIsIdempotentAndDoesNotOverwriteConfig(t *testing.T) {
 
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = todoDir
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init"})
 	if exitCode != 0 {
@@ -143,28 +134,39 @@ func TestInitIsIdempotentAndDoesNotOverwriteConfig(t *testing.T) {
 	}
 }
 
-func TestInitRespectsDirectoryOption(t *testing.T) {
+func TestInitUsesDefaultTodoDirectory(t *testing.T) {
 	t.Helper()
+
+	cwd := t.TempDir()
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+
+	if err := os.Chdir(cwd); err != nil {
+		t.Fatalf("chdir temp dir: %v", err)
+	}
+
+	t.Cleanup(func() {
+		if chdirErr := os.Chdir(previousWD); chdirErr != nil {
+			t.Fatalf("restore working directory: %v", chdirErr)
+		}
+	})
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
-	app.TodoDir = filepath.Join(t.TempDir(), "default-missing")
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
-	todoDir := filepath.Join(t.TempDir(), "work-todo")
-	exitCode := app.Run([]string{"init", "-d", todoDir})
+	exitCode := app.Run([]string{"init"})
 	if exitCode != 0 {
 		t.Fatalf("expected init to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	if _, err := os.Stat(todoDir); err != nil {
+	if _, err := os.Stat(filepath.Join(cwd, "todo")); err != nil {
 		t.Fatalf("stat initialized directory: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(todoDir, ".todos")); err != nil {
+	if _, err := os.Stat(filepath.Join(cwd, "todo", ".todos")); err != nil {
 		t.Fatalf("stat initialized config: %v", err)
 	}
 }
@@ -176,9 +178,6 @@ func TestInitRejectsExtraPositionalArgs(t *testing.T) {
 	stderr := &bytes.Buffer{}
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = filepath.Join(t.TempDir(), "todo")
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init", "extra"})
 	if exitCode != 1 {
@@ -206,9 +205,6 @@ func TestInitRejectsNonDirectoryTodoPath(t *testing.T) {
 
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = todoPath
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init"})
 	if exitCode != 1 {
@@ -241,9 +237,6 @@ func TestInitRejectsNonRegularConfigPath(t *testing.T) {
 
 	app := cli.NewApp(strings.NewReader(""), stdout, stderr, false)
 	app.TodoDir = todoDir
-	app.LookupEnv = func(string) (string, bool) {
-		return "", false
-	}
 
 	exitCode := app.Run([]string{"init"})
 	if exitCode != 1 {
