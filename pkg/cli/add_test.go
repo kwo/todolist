@@ -265,8 +265,8 @@ func TestAddAndViewParents(t *testing.T) {
 		t.Fatalf("expected stored parents front matter, got %q", viewed)
 	}
 
-	if !strings.Contains(viewed, "Parents:\n- "+parentID+" Parent todo") {
-		t.Fatalf("expected human-friendly parents section, got %q", viewed)
+	if strings.Contains(viewed, "Parents:\n- "+parentID+" Parent todo") {
+		t.Fatalf("expected no appended parents section, got %q", viewed)
 	}
 }
 

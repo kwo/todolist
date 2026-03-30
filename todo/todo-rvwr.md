@@ -1,14 +1,14 @@
 ---
 id: todo-rvwr
 title: tag-driven release workflow in GitHub Actions
-status: todo
+status: done
 priority: 5
 parents:
     - todo-96ke
 depends:
     - todo-gag2
 createdAt: "2026-03-28T18:50:47Z"
-lastModified: "2026-03-28T19:49:21Z"
+lastModified: "2026-03-30T21:02:28Z"
 ---
 
 # User Story: tag-driven release workflow in GitHub Actions

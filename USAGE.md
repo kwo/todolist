@@ -174,8 +174,7 @@ todolist view <todo-id>
 todolist view --json <todo-id>
 ```
 
-- text output returns the todo Markdown plus a human-friendly `Parents:` section when parents exist
-- each parent in the human-friendly section is shown on a single line as `- <id> <title>`
+- text output returns the raw todo Markdown, including any stored front matter
 - JSON output returns the parsed todo object including computed `ready`
 
 ### Show version information

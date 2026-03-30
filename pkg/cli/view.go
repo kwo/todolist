@@ -1,9 +1,6 @@
 package cli
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/kwo/todolist/pkg/todolist"
 )
 
@@ -29,34 +26,7 @@ func (c viewCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
-	if _, err = app.Stdout.Write(raw); err != nil {
-		return err
-	}
-
-	if len(value.Parents) == 0 {
-		return nil
-	}
-
-	parentSection, err := renderParentSection(store, value.Parents)
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(app.Stdout, "\n\n%s", parentSection)
+	_, err = app.Stdout.Write(raw)
 
 	return err
-}
-
-func renderParentSection(store *todolist.Store, parentIDs []string) (string, error) {
-	lines := []string{"Parents:"}
-	for _, parentID := range parentIDs {
-		parent, err := store.Get(parentID)
-		if err != nil {
-			return "", err
-		}
-
-		lines = append(lines, fmt.Sprintf("- %s %s", parent.ID, parent.Title))
-	}
-
-	return strings.Join(lines, "\n"), nil
 }

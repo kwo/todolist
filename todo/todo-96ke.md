@@ -5,6 +5,9 @@ status: todo
 priority: 5
 createdAt: "2026-03-28T18:50:40Z"
 lastModified: "2026-03-28T18:50:40Z"
+depends:
+  - todo-rvwr
+  - todo-qwd4
 ---
 
 # Epic: automated tagged releases and Homebrew/Linuxbrew publishing

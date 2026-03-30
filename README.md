@@ -23,6 +23,19 @@ todolist list
 todolist view <todo-id>
 ```
 
+## Releases
+
+Pushing a semantic version tag triggers the GitHub Actions release workflow.
+
+Example:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow builds release archives for macOS, Linux, and Windows on amd64 and arm64, generates a `SHA256SUMS` file, and creates the matching GitHub Release.
+
 ## Shared Specifications
 
 ### ID Generation
