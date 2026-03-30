@@ -1,9 +1,12 @@
 package cli_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/kwo/todolist/pkg/cli"
 )
 
 func TestUpdateWithFlags(t *testing.T) {
@@ -71,13 +74,16 @@ func TestUpdateRequiresAtLeastOneChange(t *testing.T) {
 	}
 }
 
-func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
+func TestUpdateParentRemovalAlsoRemovesParentDependency(t *testing.T) {
 	t.Helper()
 
 	app, stdout, stderr := newTestApp(t, false, "")
 	parentOne := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent one"})
 	parentTwo := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent two"})
 	childID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Child", "--parent", parentOne, "--parent", parentTwo})
+
+	stdout.Reset()
+	stderr.Reset()
 
 	exitCode := app.Run([]string{"list"})
 	if exitCode != 0 {
@@ -105,10 +111,17 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 		t.Fatalf("expected remaining parent %q, got %+v", parentTwo, updated.Parents)
 	}
 
-	stdout.Reset()
-	stderr.Reset()
+	assertTodoDepends(t, app, stdout, stderr, parentOne, nil)
+}
 
-	exitCode = app.Run([]string{"update", childID, "--parent", parentOne + "!"})
+func TestUpdateRejectsRemovingNonAssignedParent(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	parentOne := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent one"})
+	childID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Child"})
+
+	exitCode := app.Run([]string{"update", childID, "--parent", parentOne + "!"})
 	if exitCode != 1 {
 		t.Fatalf("expected removing non-assigned parent to fail, got %d", exitCode)
 	}
@@ -116,11 +129,19 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 	if !strings.Contains(stderr.String(), "is not currently assigned") {
 		t.Fatalf("expected non-assigned parent error, got %q", stderr.String())
 	}
+}
+
+func TestDeleteParentCleansChildParents(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	parentID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent"})
+	childID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Child", "--parent", parentID})
 
 	stdout.Reset()
 	stderr.Reset()
 
-	exitCode = app.Run([]string{"delete", parentTwo})
+	exitCode := app.Run([]string{"delete", parentID})
 	if exitCode != 0 {
 		t.Fatalf("expected delete parent to succeed, got %d: %s", exitCode, stderr.String())
 	}
@@ -140,6 +161,36 @@ func TestUpdateParentOperationsAndDeleteCleanup(t *testing.T) {
 
 	if len(child.Parents) != 0 {
 		t.Fatalf("expected parent cleanup on delete, got %+v", child.Parents)
+	}
+}
+
+func TestUpdateAddingParentAlsoAddsParentDependency(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+	parentID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Parent"})
+	childID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Child"})
+
+	exitCode := app.Run([]string{"update", "--json", childID, "--parent", parentID})
+	if exitCode != 0 {
+		t.Fatalf("expected add parent update to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode = app.Run([]string{"view", "--json", parentID})
+	if exitCode != 0 {
+		t.Fatalf("expected parent json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var parent jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &parent); err != nil {
+		t.Fatalf("unmarshal parent json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(parent.Depends) != 1 || parent.Depends[0] != childID {
+		t.Fatalf("expected parent depends to include child %q, got %+v", childID, parent.Depends)
 	}
 }
 
@@ -263,5 +314,32 @@ func TestUpdateMissingTodoFailsBeforeNoChangeValidation(t *testing.T) {
 
 	if !strings.Contains(stderr.String(), `read todo "todo-7k9m"`) {
 		t.Fatalf("expected missing todo error, got %q", stderr.String())
+	}
+}
+
+func assertTodoDepends(t *testing.T, app *cli.App, stdout, stderr *bytes.Buffer, todoID string, expected []string) {
+	t.Helper()
+
+	stdout.Reset()
+	stderr.Reset()
+
+	exitCode := app.Run([]string{"view", "--json", todoID})
+	if exitCode != 0 {
+		t.Fatalf("expected json view for %q to succeed, got %d: %s", todoID, exitCode, stderr.String())
+	}
+
+	var todo jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &todo); err != nil {
+		t.Fatalf("unmarshal todo json for %q: %v; output=%q", todoID, err, stdout.String())
+	}
+
+	if len(todo.Depends) != len(expected) {
+		t.Fatalf("expected depends %v for %q, got %+v", expected, todoID, todo.Depends)
+	}
+
+	for index, dependencyID := range expected {
+		if todo.Depends[index] != dependencyID {
+			t.Fatalf("expected depends %v for %q, got %+v", expected, todoID, todo.Depends)
+		}
 	}
 }

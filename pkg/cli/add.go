@@ -57,6 +57,10 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		return err
 	}
 
+	if err := syncParentDependencyLinks(store, value.ID, nil, value.Parents, now); err != nil {
+		return err
+	}
+
 	value = todolist.NormalizeTodo(value)
 
 	if options.JSON {

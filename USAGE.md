@@ -76,6 +76,11 @@ todolist add --title "Buy groceries" --parent todo-3h7q --parent todo-9p2d
 todolist add --title "Buy groceries" --depends todo-3h7q --depends todo-9p2d
 ```
 
+Rules:
+
+- `--parent <todo-id>` also adds the new child todo to the parent's `depends` list
+- `--depends <todo-id>` stores direct dependency relationships on the new todo
+
 A single positional argument is also accepted as the title:
 
 ```bash
@@ -213,8 +218,8 @@ todolist update todo-7k9m --depends todo-3h7q!
 Rules:
 
 - `update` must change at least one of title, status, priority, parents, dependencies, or description via stdin
-- `--parent <todo-id>` adds a parent
-- `--parent <todo-id>!` removes a parent
+- `--parent <todo-id>` adds a parent and also adds this todo to the parent's `depends` list
+- `--parent <todo-id>!` removes a parent and also removes this todo from that parent's `depends` list
 - removing a parent that is not currently assigned fails
 - `--depends <todo-id>` adds a dependency
 - `--depends <todo-id>!` removes a dependency
@@ -259,4 +264,5 @@ Prefer the CLI for normal changes. If manual editing is necessary:
 - keep priority within `1..5`
 - keep `parents` as a YAML list of existing todo IDs
 - keep `depends` as a YAML list of existing todo IDs
+- when a todo is listed in `parents`, the parent todo should also list that child todo in `depends`
 - do not store `ready`; it is computed at read time

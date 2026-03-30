@@ -238,6 +238,23 @@ func TestAddAndViewParents(t *testing.T) {
 	stdout.Reset()
 	stderr.Reset()
 
+	exitCode = app.Run([]string{"view", "--json", parentID})
+	if exitCode != 0 {
+		t.Fatalf("expected parent json view to succeed, got %d: %s", exitCode, stderr.String())
+	}
+
+	var parent jsonTodo
+	if err := json.Unmarshal(stdout.Bytes(), &parent); err != nil {
+		t.Fatalf("unmarshal parent json: %v; output=%q", err, stdout.String())
+	}
+
+	if len(parent.Depends) != 1 || parent.Depends[0] != child.ID {
+		t.Fatalf("expected parent depends to include child %q, got %+v", child.ID, parent.Depends)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+
 	exitCode = app.Run([]string{"view", child.ID})
 	if exitCode != 0 {
 		t.Fatalf("expected view to succeed, got %d: %s", exitCode, stderr.String())

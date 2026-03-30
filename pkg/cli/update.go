@@ -48,6 +48,8 @@ func (c updateCommand) Execute(app *App, options runOptions) error {
 		value.Priority = c.Priority
 	}
 
+	originalParents := append([]string(nil), value.Parents...)
+
 	if c.ParentsProvided {
 		updatedParents, parentErr := applyParentOperations(value.ID, value.Parents, c.Parents, store.Exists)
 		if parentErr != nil {
@@ -78,6 +80,13 @@ func (c updateCommand) Execute(app *App, options runOptions) error {
 
 	if err := store.Update(value); err != nil {
 		return err
+	}
+
+	if c.ParentsProvided {
+		removedParents, addedParents := diffParents(originalParents, value.Parents)
+		if err := syncParentDependencyLinks(store, value.ID, removedParents, addedParents, value.LastModified); err != nil {
+			return err
+		}
 	}
 
 	if options.JSON {
