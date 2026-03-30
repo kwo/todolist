@@ -54,7 +54,7 @@ func (c listCommand) Execute(app *App, options runOptions) error {
 	}
 
 	for _, value := range filtered {
-		if _, err = fmt.Fprintf(app.Stdout, "%s\t%d\t%s\t%s\t%s\t%s\n", value.ID, value.Priority, value.Status, truncateListTitle(value.Title), formatListParents(value.Parents), formatListParents(value.Depends)); err != nil {
+		if _, err = fmt.Fprintf(app.Stdout, "%-9s  %1d  %-4s  %-60s  %-13s  %-13s\n", value.ID, value.Priority, value.Status, truncateListTitle(value.Title), formatListParents(value.Parents), formatListParents(value.Depends)); err != nil {
 			return err
 		}
 	}

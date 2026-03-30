@@ -18,7 +18,7 @@ func TestListIncludesIDPriorityStatusAndTitleColumns(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	expectedLine := id + "\t2\twip\tBuy groceries\t\t\n"
+	expectedLine := formatListLine(id, 2, "wip", "Buy groceries", "", "")
 	if stdout.String() != expectedLine {
 		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
@@ -39,9 +39,9 @@ func TestListSortsByPriorityThenTitle(t *testing.T) {
 	}
 
 	expected := strings.Join([]string{
-		priorityOneAlpha + "\t1\ttodo\tAlpha\t\t",
-		priorityOneZulu + "\t1\ttodo\tZulu\t\t",
-		lowPriority + "\t4\ttodo\tAlpha\t\t",
+		strings.TrimSuffix(formatListLine(priorityOneAlpha, 1, "todo", "Alpha", "", ""), "\n"),
+		strings.TrimSuffix(formatListLine(priorityOneZulu, 1, "todo", "Zulu", "", ""), "\n"),
+		strings.TrimSuffix(formatListLine(lowPriority, 4, "todo", "Alpha", "", ""), "\n"),
 	}, "\n") + "\n"
 	if stdout.String() != expected {
 		t.Fatalf("expected sorted list output %q, got %q", expected, stdout.String())
@@ -94,33 +94,22 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	fields := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\t")
-	if len(fields) != 6 {
-		t.Fatalf("expected 6 list columns, got %d in %q", len(fields), stdout.String())
+	truncatedTitle := truncateListTitleForTest(longTitle)
+	if len(truncatedTitle) != 60 {
+		t.Fatalf("expected truncated title length 60, got %d in %q", len(truncatedTitle), truncatedTitle)
 	}
 
-	if fields[0] != id || fields[1] != "3" || fields[2] != "todo" {
-		t.Fatalf("unexpected list columns %q", stdout.String())
+	if !strings.HasSuffix(truncatedTitle, "...") {
+		t.Fatalf("expected truncated title to end with ellipsis, got %q", truncatedTitle)
 	}
 
-	if len(fields[3]) != 60 {
-		t.Fatalf("expected truncated title length 60, got %d in %q", len(fields[3]), fields[3])
+	if strings.Contains(truncatedTitle, "vendors") {
+		t.Fatalf("expected truncated title not to include full title, got %q", truncatedTitle)
 	}
 
-	if !strings.HasSuffix(fields[3], "...") {
-		t.Fatalf("expected truncated title to end with ellipsis, got %q", fields[3])
-	}
-
-	if strings.Contains(fields[3], "vendors") {
-		t.Fatalf("expected truncated title not to include full title, got %q", fields[3])
-	}
-
-	if fields[4] != "" {
-		t.Fatalf("expected empty parents column, got %q", fields[4])
-	}
-
-	if fields[5] != "" {
-		t.Fatalf("expected empty depends column, got %q", fields[5])
+	expectedLine := formatListLine(id, 3, "todo", truncatedTitle, "", "")
+	if stdout.String() != expectedLine {
+		t.Fatalf("expected list output %q, got %q", expectedLine, stdout.String())
 	}
 
 	stdout.Reset()
@@ -141,6 +130,17 @@ func TestListTruncatesLongTitlesWithEllipsis(t *testing.T) {
 	}
 }
 
+func TestListTextOutputHasFixedWidth(t *testing.T) {
+	t.Helper()
+
+	line := formatListLine("todo-7k9m", 5, "todo", strings.Repeat("x", 60), "todo-1a2b,...", "todo-3c4d,...")
+	line = strings.TrimSuffix(line, "\n")
+
+	if len(line) != 110 {
+		t.Fatalf("expected fixed-width line length 110, got %d in %q", len(line), line)
+	}
+}
+
 func TestListDefaultShowsOnlyReadyTodos(t *testing.T) {
 	t.Helper()
 
@@ -155,7 +155,7 @@ func TestListDefaultShowsOnlyReadyTodos(t *testing.T) {
 		t.Fatalf("expected list to succeed, got %d: %s", exitCode, stderr.String())
 	}
 
-	if !strings.Contains(stdout.String(), readyID+"\t5\ttodo\tReady todo\t\t"+readyDependency) {
+	if !strings.Contains(stdout.String(), strings.TrimSuffix(formatListLine(readyID, 5, "todo", "Ready todo", "", readyDependency), "\n")) {
 		t.Fatalf("expected ready todo in default list output, got %q", stdout.String())
 	}
 
@@ -179,11 +179,11 @@ func TestListAllIncludesReadyAndBlockedTodos(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, readyID+"\t5\ttodo\tReady todo\t\t"+readyDependency) {
+	if !strings.Contains(output, strings.TrimSuffix(formatListLine(readyID, 5, "todo", "Ready todo", "", readyDependency), "\n")) {
 		t.Fatalf("expected ready todo in --all output, got %q", output)
 	}
 
-	if !strings.Contains(output, blockedID+"\t5\ttodo\tBlocked todo\t\t"+readyDependency+",...") {
+	if !strings.Contains(output, strings.TrimSuffix(formatListLine(blockedID, 5, "todo", "Blocked todo", "", readyDependency+",..."), "\n")) {
 		t.Fatalf("expected blocked todo in --all output, got %q", output)
 	}
 
@@ -257,11 +257,11 @@ func TestListAllComposesWithStatusAndPriority(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, matchingID+"\t2\twip\tReady wip") {
+	if !strings.Contains(output, strings.TrimSuffix(formatListLine(matchingID, 2, "wip", "Ready wip", "", readyDependency), "\n")) {
 		t.Fatalf("expected matching ready todo, got %q", output)
 	}
 
-	if !strings.Contains(output, blockedID+"\t2\twip\tBlocked wip") {
+	if !strings.Contains(output, strings.TrimSuffix(formatListLine(blockedID, 2, "wip", "Blocked wip", "", blockedDependency), "\n")) {
 		t.Fatalf("expected matching blocked todo, got %q", output)
 	}
 

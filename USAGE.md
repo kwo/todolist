@@ -153,10 +153,10 @@ Filter meanings:
 - `3!` = priorities not equal to 3
 - `--all` = include both ready and blocked todos
 
-Text output columns:
+Text output columns use fixed-width, space-padded fields with two spaces between columns:
 
 ```text
-<id>\t<priority>\t<status>\t<title>\t<first-parent-id>\t<first-dependency-id>
+<id:9>  <priority:1>  <status:4>  <title:60>  <first-parent-id:13>  <first-dependency-id:13>
 ```
 
 If a todo has multiple parents, the parent column shows the first parent ID followed by `,...`.
