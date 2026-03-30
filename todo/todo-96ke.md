@@ -3,11 +3,12 @@ id: todo-96ke
 title: automated tagged releases and Homebrew/Linuxbrew publishing
 status: todo
 priority: 5
-createdAt: "2026-03-28T18:50:40Z"
-lastModified: "2026-03-28T18:50:40Z"
 depends:
-  - todo-rvwr
-  - todo-qwd4
+    - todo-rvwr
+    - todo-qwd4
+    - todo-feap
+createdAt: "2026-03-28T18:50:40Z"
+lastModified: "2026-03-30T21:30:38Z"
 ---
 
 # Epic: automated tagged releases and Homebrew/Linuxbrew publishing
