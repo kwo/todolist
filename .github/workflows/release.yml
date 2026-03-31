@@ -57,34 +57,33 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p dist
+
           binary_name=todolist
           if [ "$GOOS" = "windows" ]; then
             binary_name=todolist.exe
           fi
 
           asset_basename="todolist_${VERSION}_${GOOS}_${GOARCH}"
-          workdir="dist/${asset_basename}"
-          mkdir -p "$workdir"
+          binary_path="dist/${binary_name}"
 
           go build \
             -trimpath \
             -buildvcs=true \
             -ldflags "-s -w -X github.com/kwo/todolist/pkg/cli.Version=${VERSION}" \
-            -o "$workdir/$binary_name" \
+            -o "$binary_path" \
             .
 
-          cp README.md "$workdir/README.md"
-          cp USAGE.md "$workdir/USAGE.md"
-
-          mkdir -p dist
           if [ "$ARCHIVE_EXT" = "zip" ]; then
             (
               cd dist
-              zip -r "${asset_basename}.zip" "${asset_basename}"
+              zip -j "${asset_basename}.zip" "${binary_name}"
             )
           else
-            tar -C dist -czf "dist/${asset_basename}.tar.gz" "${asset_basename}"
+            tar -C dist -czf "dist/${asset_basename}.tar.gz" "${binary_name}"
           fi
+
+          rm -f "$binary_path"
 
       - name: Upload archive artifact
         uses: actions/upload-artifact@v7
