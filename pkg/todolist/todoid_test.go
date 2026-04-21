@@ -1,107 +1,103 @@
 package todolist_test
 
 import (
+	"errors"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/kwo/todolist/pkg/todolist"
 )
 
-func TestGenerateIDIsDeterministicAndWellFormed(t *testing.T) {
+func TestGenerateIDStartsAtZeroWhenLastIDMissing(t *testing.T) {
 	t.Helper()
 
-	value := todolist.Todo{
-		Title:       "Buy groceries",
-		Description: "Need milk",
-		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
-	}
 	exists := func(string) bool { return false }
 
-	first := todolist.GenerateID(value, exists)
-	second := todolist.GenerateID(value, exists)
-
-	if first != second {
-		t.Fatalf("expected deterministic id, got %q and %q", first, second)
-	}
-
-	matched, err := regexp.MatchString(`^todo-[0-9a-z]{4}$`, first)
+	generatedID, err := todolist.GenerateID("", exists)
 	if err != nil {
-		t.Fatalf("match id format: %v", err)
+		t.Fatalf("generate id: %v", err)
 	}
 
-	if !matched {
-		t.Fatalf("expected id to match todo-xxxx format, got %q", first)
+	if generatedID != "todo-0000" {
+		t.Fatalf("expected first id %q, got %q", "todo-0000", generatedID)
 	}
 }
 
-func TestGenerateIDIgnoresSubsecondCreatedAtPrecision(t *testing.T) {
+func TestGenerateIDIncrementsFromLastID(t *testing.T) {
 	t.Helper()
 
-	firstTodo := todolist.Todo{
-		Title:       "Buy groceries",
-		Description: "Need milk",
-		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 123000000, time.UTC),
-	}
-	secondTodo := todolist.Todo{
-		Title:       "Buy groceries",
-		Description: "Need milk",
-		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 987000000, time.UTC),
-	}
 	exists := func(string) bool { return false }
 
-	firstID := todolist.GenerateID(firstTodo, exists)
-	secondID := todolist.GenerateID(secondTodo, exists)
+	generatedID, err := todolist.GenerateID("todo-0000", exists)
+	if err != nil {
+		t.Fatalf("generate id: %v", err)
+	}
 
-	if firstID != secondID {
-		t.Fatalf("expected same id for timestamps within the same second, got %q and %q", firstID, secondID)
+	if generatedID != "todo-0001" {
+		t.Fatalf("expected incremented id %q, got %q", "todo-0001", generatedID)
 	}
 }
 
 func TestGenerateIDRetriesOnCollision(t *testing.T) {
 	t.Helper()
 
-	value := todolist.Todo{
-		Title:       "Buy groceries",
-		Description: "Need milk",
-		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
-	}
-	attempts := 0
-	exists := func(string) bool {
-		attempts++
-
-		return attempts == 1
+	exists := func(id string) bool {
+		return id == "todo-0001" || id == "todo-0002"
 	}
 
-	generatedID := todolist.GenerateID(value, exists)
-
-	if attempts < 2 {
-		t.Fatalf("expected at least two attempts, got %d", attempts)
+	generatedID, err := todolist.GenerateID("todo-0000", exists)
+	if err != nil {
+		t.Fatalf("generate id: %v", err)
 	}
 
-	if generatedID == "" {
-		t.Fatal("expected generated id")
+	if generatedID != "todo-0003" {
+		t.Fatalf("expected collision retry id %q, got %q", "todo-0003", generatedID)
 	}
 }
 
 func TestGenerateIDWithPrefixUsesConfiguredPrefix(t *testing.T) {
 	t.Helper()
 
-	value := todolist.Todo{
-		Title:       "Buy groceries",
-		Description: "Need milk",
-		CreatedAt:   time.Date(2026, time.March, 18, 10, 0, 0, 0, time.UTC),
-	}
 	exists := func(string) bool { return false }
 
-	generatedID := todolist.GenerateIDWithPrefix(value, "work-", exists)
+	generatedID, err := todolist.GenerateIDWithPrefix("", "work-", exists)
+	if err != nil {
+		t.Fatalf("generate id: %v", err)
+	}
 
-	matched, err := regexp.MatchString(`^work-[0-9a-z]{4}$`, generatedID)
+	matched, err := regexp.MatchString(`^work-[0-9abcdefghjkmnpqrstvwxyz]{4}$`, generatedID)
 	if err != nil {
 		t.Fatalf("match id format: %v", err)
 	}
 
 	if !matched {
 		t.Fatalf("expected id to match work-xxxx format, got %q", generatedID)
+	}
+}
+
+func TestGenerateIDReturnsSpaceExhaustedError(t *testing.T) {
+	t.Helper()
+
+	exists := func(string) bool { return false }
+
+	_, err := todolist.GenerateID("todo-zzzz", exists)
+	if !errors.Is(err, todolist.ErrIDSpaceExhausted) {
+		t.Fatalf("expected ErrIDSpaceExhausted, got %v", err)
+	}
+}
+
+func TestGenerateIDRejectsInvalidLastID(t *testing.T) {
+	t.Helper()
+
+	exists := func(string) bool { return false }
+
+	_, err := todolist.GenerateID("work-0000", exists)
+	if !errors.Is(err, todolist.ErrInvalidLastID) {
+		t.Fatalf("expected ErrInvalidLastID for prefix mismatch, got %v", err)
+	}
+
+	_, err = todolist.GenerateID("todo-00i0", exists)
+	if !errors.Is(err, todolist.ErrInvalidLastID) {
+		t.Fatalf("expected ErrInvalidLastID for unsupported alphabet character, got %v", err)
 	}
 }

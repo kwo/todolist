@@ -24,6 +24,7 @@ type InitResult struct {
 // Config contains per-directory todolist settings.
 type Config struct {
 	Prefix string
+	LastID string
 }
 
 // InitDirectory creates the todo directory and default config file when missing.
@@ -120,6 +121,8 @@ func parseConfig(raw string) (Config, error) {
 			}
 
 			config.Prefix = value
+		case "last_id":
+			config.LastID = value
 		default:
 			return Config{}, fmt.Errorf("line %d: unknown key %q", lineNumber, key)
 		}
@@ -130,4 +133,53 @@ func parseConfig(raw string) (Config, error) {
 	}
 
 	return config, nil
+}
+
+// SaveConfig writes the todo directory configuration.
+func SaveConfig(dir string, config Config) error {
+	path := filepath.Join(dir, configFileName)
+	tmpFile, err := os.CreateTemp(dir, configFileName+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp todo config in %q: %w", dir, err)
+	}
+
+	tmpPath := tmpFile.Name()
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+
+	if err := tmpFile.Chmod(0o600); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("set todo config permissions %q: %w", tmpPath, err)
+	}
+
+	if _, err := tmpFile.WriteString(serializeConfig(config)); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("write temp todo config %q: %w", tmpPath, err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("close temp todo config %q: %w", tmpPath, err)
+	}
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("replace todo config %q: %w", path, err)
+	}
+
+	return nil
+}
+
+func serializeConfig(config Config) string {
+	prefix := config.Prefix
+	if prefix == "" {
+		prefix = DefaultIDPrefix
+	}
+
+	builder := &strings.Builder{}
+	_, _ = builder.WriteString("prefix=" + prefix + "\n")
+	if config.LastID != "" {
+		_, _ = builder.WriteString("last_id=" + config.LastID + "\n")
+	}
+
+	return builder.String()
 }

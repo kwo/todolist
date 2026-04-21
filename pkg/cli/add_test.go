@@ -100,6 +100,31 @@ func TestAddUsesConfiguredPrefixFromTodoDirectory(t *testing.T) {
 	}
 }
 
+func TestAddPersistsAndIncrementsLastID(t *testing.T) {
+	t.Helper()
+
+	app, stdout, stderr := newTestApp(t, false, "")
+
+	firstID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "First"})
+	if firstID != "todo-0000" {
+		t.Fatalf("expected first incremental id %q, got %q", "todo-0000", firstID)
+	}
+
+	secondID := addTodoForTest(t, app, stdout, stderr, []string{"add", "--title", "Second"})
+	if secondID != "todo-0001" {
+		t.Fatalf("expected second incremental id %q, got %q", "todo-0001", secondID)
+	}
+
+	rawConfig, err := os.ReadFile(filepath.Join(app.TodoDir, ".todos"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+
+	if string(rawConfig) != "prefix=todo-\nlast_id=todo-0001\n" {
+		t.Fatalf("expected persisted last_id in config, got %q", string(rawConfig))
+	}
+}
+
 func TestAddTitleFlagHandlesStatusLikeValues(t *testing.T) {
 	t.Helper()
 

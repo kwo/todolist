@@ -43,7 +43,13 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 		LastModified: now,
 		Description:  description,
 	}
-	value.ID = todolist.GenerateIDWithPrefix(value, config.Prefix, store.Exists)
+
+	id, err := todolist.GenerateIDWithPrefix(config.LastID, config.Prefix, store.Exists)
+	if err != nil {
+		return err
+	}
+
+	value.ID = id
 
 	if err := todolist.ValidateParents(value.ID, value.Parents, store.Exists); err != nil {
 		return err
@@ -58,6 +64,11 @@ func (c addCommand) Execute(app *App, options runOptions) error {
 	}
 
 	if err := syncParentDependencyLinks(store, value.ID, nil, value.Parents, now); err != nil {
+		return err
+	}
+
+	config.LastID = value.ID
+	if err := todolist.SaveConfig(options.TodoDir, config); err != nil {
 		return err
 	}
 

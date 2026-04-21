@@ -26,6 +26,11 @@ todolist init
 
 This creates the todo directory and a `.todos` config file if they do not already exist.
 
+The `.todos` file supports:
+
+- `prefix` — ID prefix (default `todo-`)
+- `last_id` — the most recently allocated todo ID used for incremental ID generation
+
 ### Todo fields
 
 Each todo has:
@@ -95,6 +100,13 @@ todolist add --title "2"
 ```
 
 Non-JSON output prints only the new todo ID.
+
+ID allocation rules:
+
+- IDs are incremental per prefix, using a fixed 4-character Base32 suffix
+- allocation starts at `0000` when `last_id` is missing
+- allocation skips IDs that already exist
+- allocation fails when suffix space is exhausted (`zzzz`)
 
 ### Add or replace description via stdin
 

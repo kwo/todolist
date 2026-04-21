@@ -1,8 +1,8 @@
 package todolist
 
 import (
+	"errors"
 	"fmt"
-	"hash/fnv"
 	"strings"
 )
 
@@ -10,67 +10,90 @@ const (
 	alphabet        = "0123456789abcdefghjkmnpqrstvwxyz"
 	DefaultIDPrefix = "todo-"
 	visibleID       = 4
+	idRadix         = len(alphabet)
+	maxVisibleIDs   = idRadix * idRadix * idRadix * idRadix
+	maxCounter      = maxVisibleIDs - 1
+)
+
+var (
+	// ErrIDSpaceExhausted reports that no four-character IDs are available.
+	ErrIDSpaceExhausted = errors.New("todo id space exhausted")
+	// ErrInvalidLastID reports an invalid last_id configuration value.
+	ErrInvalidLastID = errors.New("invalid last todo id")
 )
 
 // ExistsFunc reports whether a generated todo ID already exists.
 type ExistsFunc func(string) bool
 
-// GenerateID returns a unique todo ID for todo, retrying with incrementing nonce values on collision.
-func GenerateID(todo Todo, exists ExistsFunc) string {
-	return GenerateIDWithPrefix(todo, DefaultIDPrefix, exists)
+// GenerateID returns the next available todo ID using the default prefix.
+func GenerateID(lastID string, exists ExistsFunc) (string, error) {
+	return GenerateIDWithPrefix(lastID, DefaultIDPrefix, exists)
 }
 
-// GenerateIDWithPrefix returns a unique todo ID for todo using prefix, retrying on collision.
-func GenerateIDWithPrefix(todo Todo, prefix string, exists ExistsFunc) string {
-	for nonce := 0; ; nonce++ {
-		id := prefix + suffix(buildSeed(todo, nonce))
+// GenerateIDWithPrefix returns the next available todo ID for prefix.
+func GenerateIDWithPrefix(lastID, prefix string, exists ExistsFunc) (string, error) {
+	counter, err := nextCounter(lastID, prefix)
+	if err != nil {
+		return "", err
+	}
+
+	for ; counter < maxVisibleIDs; counter++ {
+		id := prefix + encodeCounter(counter)
 		if !exists(id) {
-			return id
+			return id, nil
 		}
 	}
+
+	return "", ErrIDSpaceExhausted
 }
 
-func buildSeed(todo Todo, nonce int) string {
-	createdAt := NormalizeTimestamp(todo.CreatedAt)
-
-	return fmt.Sprintf("%s|%s|%d|%d", todo.Title, todo.Description, createdAt.Unix(), nonce)
-}
-
-func suffix(seed string) string {
-	hash := fnv64a(seed)
-	encoded := crockford(hash)
-	if len(encoded) < visibleID {
-		return strings.Repeat("0", visibleID-len(encoded)) + encoded
+func nextCounter(lastID, prefix string) (int, error) {
+	trimmedLastID := strings.TrimSpace(lastID)
+	if trimmedLastID == "" {
+		return 0, nil
 	}
 
-	return encoded[len(encoded)-visibleID:]
-}
-
-func fnv64a(value string) uint64 {
-	hash := fnv.New64a()
-	_, _ = hash.Write([]byte(value))
-
-	return hash.Sum64()
-}
-
-func crockford(value uint64) string {
-	if value == 0 {
-		return "0"
+	if !strings.HasPrefix(trimmedLastID, prefix) {
+		return 0, fmt.Errorf("%w: %q does not start with prefix %q", ErrInvalidLastID, trimmedLastID, prefix)
 	}
 
-	result := make([]byte, 0, 13)
-	for value > 0 {
-		result = append(result, alphabet[value%32])
-		value /= 32
+	suffix := strings.TrimPrefix(trimmedLastID, prefix)
+	if len(suffix) != visibleID {
+		return 0, fmt.Errorf("%w: %q has suffix length %d, expected %d", ErrInvalidLastID, trimmedLastID, len(suffix), visibleID)
 	}
 
-	reverse(result)
+	counter, err := decodeCounter(suffix)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %w", ErrInvalidLastID, err)
+	}
+
+	if counter == maxCounter {
+		return maxVisibleIDs, nil
+	}
+
+	return counter + 1, nil
+}
+
+func decodeCounter(suffix string) (int, error) {
+	value := 0
+	for i := 0; i < len(suffix); i++ {
+		digit := strings.IndexByte(alphabet, suffix[i])
+		if digit < 0 {
+			return 0, fmt.Errorf("suffix %q contains unsupported character %q", suffix, string(suffix[i]))
+		}
+
+		value = value*idRadix + digit
+	}
+
+	return value, nil
+}
+
+func encodeCounter(value int) string {
+	result := make([]byte, visibleID)
+	for i := visibleID - 1; i >= 0; i-- {
+		result[i] = alphabet[value%idRadix]
+		value /= idRadix
+	}
 
 	return string(result)
-}
-
-func reverse(value []byte) {
-	for left, right := 0, len(value)-1; left < right; left, right = left+1, right-1 {
-		value[left], value[right] = value[right], value[left]
-	}
 }

@@ -186,8 +186,8 @@ func TestAddListViewUpdateDeleteFlow(t *testing.T) {
 		t.Fatalf("read todo dir: %v", err)
 	}
 
-	if len(entries) != 0 {
-		t.Fatalf("expected todo dir to be empty, found %d entries", len(entries))
+	if len(entries) != 1 || entries[0].Name() != ".todos" {
+		t.Fatalf("expected only config file to remain, got %+v", entries)
 	}
 }
 
